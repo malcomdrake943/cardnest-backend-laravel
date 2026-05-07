@@ -8,8 +8,9 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\BusinessProfile;
 
-class User extends Authenticatable
+class Users extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -20,9 +21,28 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'parent_id',
+        'merchant_id',
+        'aes_key',
+        'service_type',
         'email',
-        'password',
+        'country_code',
+        'phone_number',
+        'country_name',
+        'otp_verified',
+        'business_verified',
+        'verification_reason',
+        'on_trial',
+        'trial_calls_remaining',
+        'trial_ends_at',
+        'role',
+        'device_id',
+        'session_id',
+        'device_timestamp',
+        'device',
+        'network',
+        'sims',
+        'location',
     ];
 
     /**
@@ -46,5 +66,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function businessProfile()
+    {
+        return $this->hasOne(BusinessProfile::class, 'user_id');
     }
 }

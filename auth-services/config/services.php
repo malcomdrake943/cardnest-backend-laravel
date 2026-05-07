@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'internal' => [
+        'token' => env('INTERNAL_SERVICE_TOKEN'),
+        'auth' => env('AUTH_SERVICE_URL'),
+        'card_scans' => env('CARD_SCANS_SERVICE_URL'),
+        'subscriptions' => env('SUBSCRIPTIONS_SERVICE_URL'),
+    ],
+
 ];

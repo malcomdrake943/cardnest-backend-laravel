@@ -333,7 +333,7 @@ class BusinessProfileController extends Controller
                 $message = "approved";
                 $subject = "Welcome to CardNest – Your Application Has Been Approved!";
 
-                $request = Mail::to($toEmail)->send(new approvedemail($message, $subject, $accountHolderFirstName));
+                $emailResponse = Mail::to($toEmail)->send(new approvedemail($message, $subject, $accountHolderFirstName));
                 // MAIL CODE    
             }
 
@@ -341,7 +341,7 @@ class BusinessProfileController extends Controller
             $user->business_verified = $newStatus;
 
             if ($newStatus === 'INCOMPLETE') {
-                $user->verification_reason = $request->reason;
+                $user->verification_reason = $emailResponse->reason;
             } else {
                 $user->verification_reason = null; // Clear reason if status changes from INCOMPLETE
             }
@@ -400,11 +400,6 @@ class BusinessProfileController extends Controller
                 ], 404);
             }
 
-            // Get latest card scan for this merchant
-            $latestCardScan = CardScan::where('merchant_id', $user->merchant_id)
-                ->latest()
-                ->first();
-
             // Get all user attributes
             $userData = $user->toArray();
 
@@ -416,14 +411,6 @@ class BusinessProfileController extends Controller
                 $userData['business_profile'] = $user->businessProfile->toArray();
             } else {
                 $userData['business_profile'] = null;
-            }
-
-            // Generate scanURL if card scan and business profile exist
-            $userData['scanURL'] = null;
-            if ($latestCardScan && $user->businessProfile && $user->businessProfile->business_name) {
-                $scanId = $latestCardScan->scan_id;
-                $businessName = $user->businessProfile->business_name;
-                $userData['scanURL'] = "https://auth.cardnest.io/" . rawurlencode($businessName) . "/{$scanId}";
             }
 
             return response()->json([
@@ -439,6 +426,17 @@ class BusinessProfileController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    protected function getStatusMessage($status)
+    {
+        $messages = [
+            'APPROVED' => 'Business documents approved successfully',
+            'PENDING' => 'Business verification status set to pending',
+            'INCOMPLETE' => 'Business documents marked as incomplete'
+        ];
+
+        return $messages[$status] ?? 'Status updated';
     }
 
 }

@@ -41,6 +41,7 @@ Route::middleware(['verify.user'])->group(function () {
     Route::post('/UpdateCardScan', [ScanController::class, 'UpdateCardScan']);
     Route::get('/merchant/getCardScans', [ScanController::class, 'getCardScans']);
 
+    //SUPER ADMIN ENDPOINTS
     Route::post('/superadmin/uploadDocumentation', [SuperAdminController::class, 'uploadDocumentation']);
     Route::get('/superadmin/getDocumentation', [SuperAdminController::class, 'getDocumentation']);
     Route::post('/superadmin/grant-subadmin-access', [SuperAdminController::class, 'grantSubadminAccess']);

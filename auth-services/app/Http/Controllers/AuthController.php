@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\Users;
+use Carbon\Carbon;
 use App\Models\TempOtp;
 use Illuminate\Support\Facades\Validator;
+
 class AuthController extends Controller
 {
     public function signup(Request $request)

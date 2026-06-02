@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->string('status')->nullable();
             $table->string('encrypted_data')->nullable();
             $table->string('scan_id')->nullable();
-            $table->foreignId('session_id')->constrained('scan_session')->onDelete('cascade')->nullable();
+            $table->foreignId('session_id')->constrained('scan_sessions')->onDelete('cascade')->nullable();
             $table->string('failure_reason')->nullable();
             $table->string('failure_stage')->nullable();
             $table->timestamps();

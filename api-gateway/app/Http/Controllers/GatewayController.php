@@ -91,7 +91,10 @@ class GatewayController extends Controller
         ];
 
         // Handle request body
-        if ($request->isMultipart()) {
+        $contentType = $request->header('Content-Type');
+        $isMultipart = str_contains((string) $contentType, 'multipart/form-data') || !empty($request->allFiles());
+
+        if ($isMultipart) {
             // Build multipart payload for Guzzle
             $multipart = [];
             

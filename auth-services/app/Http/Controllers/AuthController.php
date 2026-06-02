@@ -120,7 +120,7 @@ class AuthController extends Controller
 
         // Generate JWT token using only merchant_id
         $customClaims = ['merchant_id' => $user->merchant_id];
-        $token = auth()->claims($customClaims)->login($user);
+        $token = auth('api')->claims($customClaims)->login($user);
 
         return response()->json([
             'status' => true,
@@ -129,7 +129,7 @@ class AuthController extends Controller
             'merchant_id' => $user->merchant_id,
             'JWT_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60,
+            'expires_in' => auth('api')->factory()->getTTL() * 60,
             'user' => $user,
         ], 200);
     }

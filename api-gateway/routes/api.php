@@ -14,7 +14,9 @@ Route::post('auth/login', [GatewayController::class, 'proxyToAuthService']);
 Route::get('auth/user', [GatewayController::class, 'getAuthenticatedUser']);
 
 // Admin-only business profile decision route
-Route::middleware(['admin'])->post('business-profile/decision', [GatewayController::class, 'proxyToAuthService']);
+// Route::middleware(['admin'])->post('business-profile/decision', [GatewayController::class, 'proxyToAuthService']);
+Route::post('business-profile/decision', [GatewayController::class, 'proxyToAuthService']);
+
 
 // Standard business profile routes
 Route::any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
@@ -33,8 +35,9 @@ Route::any('updateMerchantScanInfo', [GatewayController::class, 'proxyToSubscrip
 Route::any('updateMerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
 
 // Admin-only Superadmin routes (restricted to SUPER_ADMIN role)
-Route::middleware(['admin'])->group(function () {
-    Route::any('superadmin/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
-    Route::any('internal/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
-});
+// Route::middleware(['admin'])->group(function () {
+Route::any('superadmin/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+Route::any('internal/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
+// });
+
 // });

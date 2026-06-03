@@ -207,12 +207,10 @@ class BusinessProfileController extends Controller
                 $statusCode = 200;
             } else {
                 // Create new profile
-                $businessProfileData['user_id'] = $user->id;
-                $businessProfile = BusinessProfile::create($businessProfileData);
                 $account_holder = AccountHolder::create($accountHolderData);
-                $businessProfile->update([
-                    'account_holder_id' => $account_holder->id
-                ]);
+                $businessProfileData['user_id'] = $user->id;
+                $businessProfileData['account_holder_id'] = $account_holder->id;
+                $businessProfile = BusinessProfile::create($businessProfileData);
                 $message = 'Business profile created successfully';
                 $statusCode = 201;
             }
@@ -232,7 +230,7 @@ class BusinessProfileController extends Controller
             $message = "signup";
             $subject = "Thank You for Choosing CardNest – Your Application is Under Review";
 
-            $email1 = Mail::to($toEmail)->send(new welcomemail($message, $subject, $accountHolderFirstName));
+            // $email1 = Mail::to($toEmail)->send(new welcomemail($message, $subject, $accountHolderFirstName));
             // MAIL CODE
 
             // MAIL 2 CODE
@@ -260,7 +258,7 @@ class BusinessProfileController extends Controller
             $mailType = "admin";
             $subject = "Action Required – New Pending Customer/Business Applications for Review";
 
-            $email2 = Mail::to($toEmail)->cc($moreuser)->send(new adminemail($mailType, $subject, $admin));
+            // $email2 = Mail::to($toEmail)->cc($moreuser)->send(new adminemail($mailType, $subject, $admin));
             // MAIL 2 CODE
 
             return response()->json([
@@ -268,7 +266,6 @@ class BusinessProfileController extends Controller
                 'message' => $message,
                 'data' => $businessProfile
             ], $statusCode);
-
         } catch (\Exception $e) {
             // Delete any uploaded files if something went wrong
             if (isset($registrationFilePath)) {
@@ -324,7 +321,7 @@ class BusinessProfileController extends Controller
                 // Check for account_holder_first_name with multiple fallbacks
                 $accountHolderFirstName = 'Customer'; // Default string
 
-                if ($user->businessProfile && !empty($user->businessProfile->accountHolder && $user->businessProfile->accountHolder->first_name)) {
+                if ($user->businessProfile && $user->businessProfile->accountHolder && !empty($user->businessProfile->accountHolder->first_name)) {
                     $accountHolderFirstName = $user->businessProfile->accountHolder->first_name;
                 }
 
@@ -333,7 +330,7 @@ class BusinessProfileController extends Controller
                 $message = "approved";
                 $subject = "Welcome to CardNest – Your Application Has Been Approved!";
 
-                $emailResponse = Mail::to($toEmail)->send(new approvedemail($message, $subject, $accountHolderFirstName));
+                //$emailResponse = Mail::to($toEmail)->send(new approvedemail($message, $subject, $accountHolderFirstName));
                 // MAIL CODE    
             }
 
@@ -341,7 +338,7 @@ class BusinessProfileController extends Controller
             $user->business_verified = $newStatus;
 
             if ($newStatus === 'INCOMPLETE') {
-                $user->verification_reason = $emailResponse->reason;
+                $user->verification_reason = $request->reason;
             } else {
                 $user->verification_reason = null; // Clear reason if status changes from INCOMPLETE
             }
@@ -360,7 +357,6 @@ class BusinessProfileController extends Controller
                     'business_profile' => $user->businessProfile
                 ]
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -418,7 +414,6 @@ class BusinessProfileController extends Controller
                 'message' => 'User data retrieved successfully',
                 'data' => $userData
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -438,5 +433,4 @@ class BusinessProfileController extends Controller
 
         return $messages[$status] ?? 'Status updated';
     }
-
 }

@@ -64,11 +64,20 @@ class GatewayController extends Controller
 
         $targetUrl = rtrim($baseUrl, '/') . '/' . ltrim($subPath, '/');
 
+        // Determine if request is multipart/form-data
+        $contentType = $request->header('Content-Type');
+        $isMultipart = str_contains((string) $contentType, 'multipart/form-data') || !empty($request->allFiles());
+
         // Headers
         $headers = [];
         foreach ($request->headers->all() as $name => $values) {
-            // Exclude Host header
-            if (strtolower($name) === 'host') {
+            $lowerName = strtolower($name);
+            // Exclude Host and Content-Length headers to let Guzzle set them
+            if (in_array($lowerName, ['host', 'content-length'])) {
+                continue;
+            }
+            // Exclude Content-Type for multipart requests so Guzzle generates the correct boundary
+            if ($isMultipart && $lowerName === 'content-type') {
                 continue;
             }
             $headers[$name] = $values[0];
@@ -91,8 +100,6 @@ class GatewayController extends Controller
         ];
 
         // Handle request body
-        $contentType = $request->header('Content-Type');
-        $isMultipart = str_contains((string) $contentType, 'multipart/form-data') || !empty($request->allFiles());
 
         if ($isMultipart) {
             // Build multipart payload for Guzzle

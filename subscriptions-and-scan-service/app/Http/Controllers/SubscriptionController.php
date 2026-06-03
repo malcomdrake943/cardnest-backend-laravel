@@ -139,10 +139,25 @@ class SubscriptionController extends Controller
             }
 
             // 3. Create the NEW active subscription record for the new cycle
+            $packageId = $request->package_id ?? ($currentSubscription->package_id ?? 1);
+
+            // Ensure the package exists in the database to prevent foreign key constraint failure
+            if (!Package::where('id', $packageId)->exists()) {
+                $package = new Package();
+                $package->id = $packageId;
+                $package->package_name = 'Default Package ' . $packageId;
+                $package->package_price = 0.00;
+                $package->package_period = 'month';
+                $package->package_description = 'Default plan created automatically';
+                $package->monthly_limit = 1000;
+                $package->overage_rate = 0.10;
+                $package->save();
+            }
+
             $subscription = new Subscription();
             $subscription->merchant_id = $merchantId;
             $subscription->user_id = $userId;
-            $subscription->package_id = $request->package_id ?? ($currentSubscription->package_id ?? 1);
+            $subscription->package_id = $packageId ?? null;
             $subscription->status = 'active';
             $subscription->api_call_limit = $newLimit;
             $subscription->api_calls_used = 0;
@@ -151,7 +166,6 @@ class SubscriptionController extends Controller
             $subscription->renewal_date = $startDate->copy()->addMonth();
             $subscription->is_custom_renewal = 1;
             $subscription->save();
-
         } else {
             // 4. Mid-cycle update (adjusting current active subscription)
             $subscription = $currentSubscription;
@@ -212,4 +226,3 @@ class SubscriptionController extends Controller
         ], 200);
     }
 }
-

@@ -12,6 +12,10 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+//PACKAGES ENDPOINTS
+Route::get('/Packages', [PackageController::class, 'index']);
+Route::post('/Packages/Update/{id}', [PackageController::class, 'update'])->where('id', '[0-9]+');
+Route::get('/Packages/Show/{id}', [PackageController::class, 'show']);
 
 //SUBSCRIPTION HANDLING ENDPOINTS
 Route::middleware(['verify.user'])->group(function () {
@@ -20,11 +24,6 @@ Route::middleware(['verify.user'])->group(function () {
     Route::post('/Subscriptions/customPackagePricing', [SubscriptionController::class, 'customPackagePricing']);
     Route::post('/Subscriptions/setup-renewal', [SubscriptionController::class, 'setupRenewal']);
     Route::get('/merchant/getOldSubscriptions', [SubscriptionController::class, 'getOldSubscriptions']);
-
-    //PACKAGES ENDPOINTS
-    Route::get('/Packages', [PackageController::class, 'index']);
-    Route::post('/Packages/Update/{id}', [PackageController::class, 'update'])->where('id', '[0-9]+');
-    Route::get('/Packages/Show/{id}', [PackageController::class, 'show']);
 
     // MERCHANT ENDPOINTS 
     Route::get('/getmerchantscanInfo', [MerchantController::class, 'getmerchantscanInfo']);
@@ -54,4 +53,3 @@ Route::middleware(['verify.user'])->group(function () {
     Route::get('/superadmin/get-sub-business', [SuperAdminController::class, 'get_sub_businesses']);
     Route::get('/superadmin/get-enterprise-sub-business', [SuperAdminController::class, 'getEnterpriseUsersWithSubBusinesses']);
 });
-

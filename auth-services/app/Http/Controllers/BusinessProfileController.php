@@ -385,8 +385,8 @@ class BusinessProfileController extends Controller
         }
 
         try {
-            // Get user with business profile
-            $user = Users::with('businessProfile')
+            // Get user with business profile and linked account holder
+            $user = Users::with('businessProfile.accountHolder')
                 ->find($request->user_id);
 
             if (!$user) {

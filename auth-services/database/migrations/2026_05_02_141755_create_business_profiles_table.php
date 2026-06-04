@@ -12,19 +12,19 @@ return new class extends Migration {
     {
         Schema::create('business_profiles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('service_type')->default('card_scan');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->nullable();
+            $table->string('service_type')->default('card_scan')->nullable();
             $table->foreignId('account_holder_id')->constrained('account_holders')->onDelete('cascade');
-            $table->string('email');
-            $table->string('business_name');
-            $table->string('business_registration_number');
-            $table->string('street');
-            $table->string('street_line2');
-            $table->string('city');
-            $table->string('state');
-            $table->string('zip_code');
-            $table->string('country');
-            $table->string('registration_document_path');
+            $table->string('email')->nullable();
+            $table->string('business_name')->nullable();
+            $table->string('business_registration_number')->nullable();
+            $table->string('street')->nullable();
+            $table->string('street_line2')->nullable();
+            $table->string('city')->nullable();
+            $table->string('state')->nullable();
+            $table->string('zip_code')->nullable();
+            $table->string('country')->nullable();
+            $table->string('registration_document_path')->nullable();
             $table->string('display_name')->nullable();
             $table->string('display_logo')->nullable();
             $table->timestamps();

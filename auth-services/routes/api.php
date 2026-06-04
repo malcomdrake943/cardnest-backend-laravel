@@ -13,6 +13,7 @@ Route::get('/user', function (Request $request) {
 //LOGIN AND OTP ROUTES
 Route::post('signup', [AuthController::class, 'signup']);
 Route::post('login', [AuthController::class, 'login']);
+Route::post('check-user-exists', [AuthController::class, 'checkUserExists']);
 
 //BUSINESS PROFILE ROUTES
 Route::prefix('business-profile')->group(function () {

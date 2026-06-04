@@ -98,7 +98,7 @@ class AuthController extends Controller
 
         // Determine if input is email or phone
         $isEmail = filter_var($request->login_input, FILTER_VALIDATE_EMAIL);
-        $field = $isEmail ? 'email' : 'phone_no';
+        $field = $isEmail ? 'email' : 'phone_number';
 
         // Find user based on provided credentials
         $query = Users::where('country_code', $request->country_code)
@@ -132,5 +132,70 @@ class AuthController extends Controller
             'expires_in' => auth('api')->factory()->getTTL() * 60,
             'user' => $user,
         ], 200);
+    }
+
+    public function checkUserExists(Request $request)
+    {
+        // Validate the request
+        $request->validate([
+            'email' => 'required_without:phone_no|nullable|email',
+            'phone_no' => 'required_without:email|nullable|string',
+        ]);
+
+        $email = $request->input('email');
+        $phone = $request->input('phone_no');
+
+        $exists = false;
+        $field = null;
+        $message = null;
+
+        // Check if both email and phone are provided
+        if ($email && $phone) {
+            $userByEmail = Users::where('email', $email)->first();
+            $userByPhone = Users::where('phone_number', $phone)->first();
+
+            if ($userByEmail && $userByPhone) {
+                return response()->json([
+                    'exists' => true,
+                    'field' => 'both',
+                    'message' => 'User already exists with this email and phone number'
+                ]);
+            } elseif ($userByEmail) {
+                return response()->json([
+                    'exists' => true,
+                    'field' => 'email',
+                    'message' => 'User already exists with this email'
+                ]);
+            } elseif ($userByPhone) {
+                return response()->json([
+                    'exists' => true,
+                    'field' => 'phone_no',
+                    'message' => 'User already exists with this phone number'
+                ]);
+            }
+        } elseif ($email) {
+            $user = Users::where('email', $email)->first();
+            if ($user) {
+                return response()->json([
+                    'exists' => true,
+                    'field' => 'email',
+                    'message' => 'User already exists with this email'
+                ]);
+            }
+        } elseif ($phone) {
+            $user = Users::where('phone_number', $phone)->first();
+            if ($user) {
+                return response()->json([
+                    'exists' => true,
+                    'field' => 'phone_no',
+                    'message' => 'User already exists with this phone number'
+                ]);
+            }
+        }
+
+        return response()->json([
+            'exists' => false,
+            'message' => 'No user found with these credentials'
+        ]);
     }
 }

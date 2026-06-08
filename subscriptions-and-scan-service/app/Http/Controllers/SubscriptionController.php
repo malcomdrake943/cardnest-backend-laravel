@@ -206,8 +206,27 @@ class SubscriptionController extends Controller
             ], 422);
         }
 
+        $authUser = $request->auth_user;
+        $userRole = $request->header('X-User-Role') ?? ($authUser['role'] ?? null);
+        $isSuperAdmin = ($userRole === 'SUPER_ADMIN');
+
+        // Determine merchant_id to query based on user role and request inputs
+        if ($isSuperAdmin) {
+            $merchantId = $request->id ?? $request->merchant_id ?? ($authUser['merchant_id'] ?? null);
+        } else {
+            $merchantId = $authUser['merchant_id'] ?? $request->merchant_id;
+        }
+
+        if (!$merchantId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => ['id' => ['The merchant ID is required.']]
+            ], 422);
+        }
+
         // Retrieve all subscriptions from the single 'subscriptions' table
-        $subscriptions = Subscription::where('merchant_id', $request->id)
+        $subscriptions = Subscription::where('merchant_id', $merchantId)
             ->latest()
             ->get();
 

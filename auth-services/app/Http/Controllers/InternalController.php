@@ -26,15 +26,13 @@ class InternalController extends Controller
             ], 401);
         }
 
-        $userId = $request->input('user_id');
-        $merchantId = $request->input('merchant_id');
+        $userId = $request->input('id') ?? $request->input('user_id') ?? $request->input('merchant_id');
 
         $query = Users::query();
 
         if ($userId) {
-            $query->where('id', $userId);
-        } elseif ($merchantId) {
-            $query->where('merchant_id', $merchantId);
+            $query->where('id', $userId)
+                ->orwhere('merchant_id', $userId);
         } else {
             return response()->json([
                 'status' => false,
@@ -441,7 +439,6 @@ class InternalController extends Controller
                     'sub_businesses' => $createdSubBusinesses
                 ]
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -625,7 +622,6 @@ class InternalController extends Controller
                 'data' => $formattedEnterpriseUsers,
                 'total_enterprise_users' => $enterpriseUsers->count()
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,

@@ -46,9 +46,9 @@ class AuthController extends Controller
             'business_verified' => 'INCOMPLETE PROFILE',
             'role' => 'BUSINESS_USER', // Add role with default value
             'service_type' => $request->service_type,
-            'trial_ends_at' => Carbon::now()->addDays(7), // 7-day trial
-            'trial_calls_remaining' => 20,
-            'on_trial' => true,
+            'trial_ends_at' => null,
+            'trial_calls_remaining' => null,
+            'on_trial' => false,
         ]);
 
         $merchantId = Str::random(14);

@@ -140,18 +140,19 @@ class SubscriptionController extends Controller
 
             // 3. Create the NEW active subscription record for the new cycle
             $packageId = $request->package_id ?? ($currentSubscription->package_id ?? 1);
-
             // Ensure the package exists in the database to prevent foreign key constraint failure
             if (!Package::where('id', $packageId)->exists()) {
-                $package = new Package();
-                $package->id = $packageId;
-                $package->package_name = 'Default Package ' . $packageId;
-                $package->package_price = 0.00;
-                $package->package_period = 'month';
-                $package->package_description = 'Default plan created automatically';
-                $package->monthly_limit = 1000;
-                $package->overage_rate = 0.10;
-                $package->save();
+                Package::insert([
+                    'id' => $packageId,
+                    'package_name' => 'Default Package ' . $packageId,
+                    'package_price' => 0.00,
+                    'package_period' => 'month',
+                    'package_description' => 'Default plan created automatically',
+                    'monthly_limit' => 1000,
+                    'overage_rate' => 0.10,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             $subscription = new Subscription();

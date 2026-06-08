@@ -30,6 +30,7 @@ Route::middleware(['verify.user'])->group(function () {
     Route::get('/getmerchantDisplayInfo', [MerchantController::class, 'getmerchantDisplayInfo']);
     Route::post('/updateMerchantScanInfo', [MerchantController::class, 'updateMerchantScanInfo']);
     Route::post('/updateMerchantDisplayInfo', [MerchantController::class, 'updateMerchantDisplayInfo']);
+    Route::get('/getDocumentation', [SuperAdminController::class, 'getDocumentation']);
 
     //SCAN ENDPOINTS 
     Route::post('/merchantscan/generateToken', [ScanController::class, 'generateToken']);
@@ -38,11 +39,10 @@ Route::middleware(['verify.user'])->group(function () {
     Route::post('/scan/getEncryptedData', [ScanController::class, 'getEncryptedData']);
     Route::post('/scan/decodeToken', [ScanController::class, 'decodeToken']);
     Route::post('/UpdateCardScan', [ScanController::class, 'UpdateCardScan']);
-    Route::get('/merchant/getCardScans', [ScanController::class, 'getCardScans']);
+    Route::get('/merchant/getCardScans/{id?}', [ScanController::class, 'getCardScans']);
 
     //SUPER ADMIN ENDPOINTS
     Route::post('/superadmin/uploadDocumentation', [SuperAdminController::class, 'uploadDocumentation']);
-    Route::get('/superadmin/getDocumentation', [SuperAdminController::class, 'getDocumentation']);
     Route::post('/superadmin/grant-subadmin-access', [SuperAdminController::class, 'grantSubadminAccess']);
     Route::get('/superadmin/access-all-scans', [SuperAdminController::class, 'accessAllScans']);  //list of merchants(merchant_id, business_name, total scans, success_rate(card_scan status), number_of_merchants)
     Route::get('/superadmin/access-all-scans/{id?}', [SuperAdminController::class, 'scanDetail']); //jiski id uske scans, encrypted_data + encrypted_key, on card_scans table based on status, total number of success and failure 

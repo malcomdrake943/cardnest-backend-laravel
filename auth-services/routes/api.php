@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BusinessProfileController;
 use App\Http\Controllers\InternalController;
+use App\Http\Controllers\API\FeatureController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -23,6 +24,11 @@ Route::prefix('business-profile')->group(function () {
     Route::post('/decision', [BusinessProfileController::class, 'updateStatus']); // Approve/Reject
     Route::get('/business-verification-status', [BusinessProfileController::class, 'getStatus']);
 });
+
+// FEATURE ROUTES
+Route::post('/scan/storeFeature', [FeatureController::class, 'storeFeature']);
+Route::post('/feature/store', [FeatureController::class, 'store']);
+Route::get('/feature/get', [FeatureController::class, 'getFeatures']);
 
 // INTERNAL SERVICE ROUTES
 Route::get('/internal/verify-user', [InternalController::class, 'verifyUser']);

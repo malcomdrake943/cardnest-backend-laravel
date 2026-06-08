@@ -20,6 +20,10 @@ Route::middleware(['auth.jwt'])->group(function () {
     // Standard business profile routes
     Route::any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
 
+    // Feature management routes (proxied to Auth Service)
+    Route::post('scan/storeFeature', [GatewayController::class, 'proxyToAuthService']);
+    Route::any('feature/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
+
     // Subscriptions, Packages, Merchant, Scan, and Card Scan routes (proxied to Subscriptions Service)
     Route::any('Subscriptions/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
     Route::any('Packages/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
@@ -32,11 +36,11 @@ Route::middleware(['auth.jwt'])->group(function () {
     Route::any('getmerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
     Route::any('updateMerchantScanInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
     Route::any('updateMerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
+    Route::any('getDocumentation', [GatewayController::class, 'proxyToSubscriptionsService']);
 
     // Admin-only Superadmin routes (restricted to SUPER_ADMIN role)
     Route::middleware(['admin'])->group(function () {
         Route::any('superadmin/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
         Route::any('internal/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
     });
-
 });

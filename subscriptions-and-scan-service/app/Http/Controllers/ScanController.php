@@ -441,27 +441,25 @@ class ScanController extends Controller
      * @param  \Illuminate\Http\Request  $request  { id: string }
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getCardScans(Request $request)
+    public function getCardScans(Request $request, $id = null)
     {
-        $validator = Validator::make($request->all(), [
-            'id' => 'required',
-        ]);
+        $merchantId = $id ?? $request->input('id');
 
-        if ($validator->fails()) {
+        if (!$merchantId) {
             return response()->json([
                 'status' => false,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => ['id' => ['The id field is required.']]
             ], 422);
         }
 
         // Check local subscriptions
-        $subscription = Subscription::where('merchant_id', $request->id)
+        $subscription = Subscription::where('merchant_id', $merchantId)
             ->latest()
             ->first();
 
         if ($subscription) {
-            $scan = Scan::where('merchant_id', $request->id)
+            $scan = Scan::where('merchant_id', $merchantId)
                 ->latest()
                 ->get();
 

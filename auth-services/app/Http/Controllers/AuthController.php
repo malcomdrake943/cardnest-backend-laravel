@@ -72,8 +72,13 @@ class AuthController extends Controller
         // Refresh user data
         $user->refresh();
 
+        $customClaims = ['merchant_id' => $user->merchant_id];
+        $token = auth('api')->claims($customClaims)->login($user);
+
         return response()->json([
             'status' => true,
+            'expires_in' => auth('api')->factory()->getTTL() * 60,
+            'JWT_token' => $token,
             'message' => $user->wasRecentlyCreated ? 'User Created Successfully.' : 'User details updated.',
             'user' => $user->makeHidden(['aes_key']), // Don't return the key
         ], 200);

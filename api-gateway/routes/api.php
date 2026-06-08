@@ -20,9 +20,9 @@ Route::middleware(['auth.jwt'])->group(function () {
     // Standard business profile routes
     Route::any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
 
-    // Feature management routes (proxied to Auth Service)
-    Route::post('scan/storeFeature', [GatewayController::class, 'proxyToAuthService']);
-    Route::any('feature/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
+    // Feature management routes (proxied to Subscriptions Service)
+    Route::post('scan/storeFeature', [GatewayController::class, 'proxyToSubscriptionsService']);
+    Route::any('feature/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
 
     // Subscriptions, Packages, Merchant, Scan, and Card Scan routes (proxied to Subscriptions Service)
     Route::any('Subscriptions/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');

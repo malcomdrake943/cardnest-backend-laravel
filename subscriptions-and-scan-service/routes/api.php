@@ -7,6 +7,7 @@ use App\Http\Controllers\PackageController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\MerchantController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\FeatureController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -16,6 +17,11 @@ Route::get('/user', function (Request $request) {
 Route::get('/Packages', [PackageController::class, 'index']);
 Route::post('/Packages/Update/{id}', [PackageController::class, 'update'])->where('id', '[0-9]+');
 Route::get('/Packages/Show/{id}', [PackageController::class, 'show']);
+
+//FEATURE ENDPOINTS
+Route::post('/scan/storeFeature', [FeatureController::class, 'storeFeature']);
+Route::post('/feature/store', [FeatureController::class, 'store']);
+Route::get('/feature/get', [FeatureController::class, 'getFeatures']);
 
 //SUBSCRIPTION HANDLING ENDPOINTS
 Route::middleware(['verify.user'])->group(function () {

@@ -22,9 +22,6 @@ return new class extends Migration
             $table->boolean('customer_service')->default(false)->nullable();
             $table->boolean('symmetry')->default(false)->nullable();
             $table->timestamps();
-
-            // Foreign key relation to users table
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

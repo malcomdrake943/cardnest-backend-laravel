@@ -75,19 +75,40 @@ class FeatureController extends Controller
 
     public function getFeatures(Request $request)
     {
-        $request->validate([
-            'auth_token' => 'required|string'
-        ]);
+        $userId = null;
 
-        $payload = $this->decodeAuthToken($request->auth_token);
-        if (!$payload) {
-            return response()->json([
-                'code' => 400,
-                'message' => 'Invalid or expired auth token.'
-            ], 400);
+        if ($request->has('auth_token')) {
+            $payload = $this->decodeAuthToken($request->auth_token);
+            if (!$payload) {
+                return response()->json([
+                    'code' => 400,
+                    'message' => 'Invalid or expired auth token.'
+                ], 400);
+            }
+            $userId = $payload->get('sub');
+        } elseif ($request->bearerToken()) {
+            try {
+                $payload = JWTAuth::setToken($request->bearerToken())->getPayload();
+                $userId = $payload->get('sub');
+            } catch (\Exception $e) {
+                Log::error('FeatureController getFeatures bearerToken error: ' . $e->getMessage());
+                return response()->json([
+                    'code' => 401,
+                    'message' => 'Invalid or expired Authorization token.'
+                ], 401);
+            }
+        } elseif ($request->auth_user && isset($request->auth_user['id'])) {
+            $userId = $request->auth_user['id'];
+        } elseif ($request->has('user_id')) {
+            $userId = $request->user_id;
         }
 
-        $userId = $payload->get('sub');
+        if (!$userId) {
+            return response()->json([
+                'code' => 400,
+                'message' => 'A valid auth_token, Authorization header, or user_id is required.'
+            ], 400);
+        }
 
         // Check if user exists via auth service
         if (!$this->userExists($userId)) {
@@ -98,9 +119,9 @@ class FeatureController extends Controller
         }
 
         // Get features for the user
-        $features = Feature::where('user_id', $userId)->first();
+        $features = Feature::where('user_id', $userId)->get();
 
-        if (!$features) {
+        if ($features->isEmpty()) {
             return response()->json([
                 'code' => 404,
                 'message' => 'No features found for this user.'

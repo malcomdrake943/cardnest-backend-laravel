@@ -391,32 +391,31 @@ class SuperAdminController extends Controller
     {
         // Get current subscriptions
         $allSubscriptions = Subscription::select(
+            'id',
             'user_id',
             'merchant_id',
             'package_id',
-            'api_calls_limit',
+            'is_custom_renewal',
+            'api_call_limit',
             'api_calls_used',
             'overage_calls',
+            'status',
             'subscription_date',
             'renewal_date',
-            'is_blocked',
-            'custom_package',
-            'custom_price',
-            'custom_calls_used',
-            'custom_status',
-            'custom_api_count'
+            'created_at',
+            'updated_at'
         )->get();
 
-        $oldSubscriptions = $allSubscriptions->where('status, expired')->count();
-        $subscriptions = $allSubscriptions->where('status', 'active')->count();
+        $oldSubscriptionsCount = $allSubscriptions->where('status', '!=', 'active')->count();
+        $currentSubscriptionsCount = $allSubscriptions->where('status', 'active')->count();
 
         return response()->json([
             'status' => true,
             'message' => 'All subscription records retrieved successfully',
             'data' => $allSubscriptions,
             'metadata' => [
-                'old_subscriptions_count' => $oldSubscriptions->count(),
-                'current_subscriptions_count' => $subscriptions->count(),
+                'old_subscriptions_count' => $oldSubscriptionsCount,
+                'current_subscriptions_count' => $currentSubscriptionsCount,
                 'total_records' => $allSubscriptions->count()
             ]
         ], 200);

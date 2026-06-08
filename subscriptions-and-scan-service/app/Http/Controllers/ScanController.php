@@ -443,13 +443,22 @@ class ScanController extends Controller
      */
     public function getCardScans(Request $request, $id = null)
     {
-        $merchantId = $id ?? $request->input('id');
+        $authUser = $request->auth_user;
+        $userRole = $request->header('X-User-Role') ?? ($authUser['role'] ?? null);
+        $isSuperAdmin = ($userRole === 'SUPER_ADMIN');
+
+        // Determine merchant_id to query based on user role and request inputs
+        if ($isSuperAdmin) {
+            $merchantId = $id ?? $request->input('merchant_id') ?? $request->input('merchantId') ?? $request->input('id') ?? ($authUser['merchant_id'] ?? null);
+        } else {
+            $merchantId = $authUser['merchant_id'] ?? $id ?? $request->input('merchant_id') ?? $request->input('merchantId');
+        }
 
         if (!$merchantId) {
             return response()->json([
                 'status' => false,
                 'message' => 'Validation Error',
-                'errors' => ['id' => ['The id field is required.']]
+                'errors' => ['id' => ['The merchant ID is required.']]
             ], 422);
         }
 

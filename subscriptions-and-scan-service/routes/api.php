@@ -18,13 +18,14 @@ Route::get('/Packages', [PackageController::class, 'index']);
 Route::post('/Packages/Update/{id}', [PackageController::class, 'update'])->where('id', '[0-9]+');
 Route::get('/Packages/Show/{id}', [PackageController::class, 'show']);
 
-//FEATURE ENDPOINTS
-Route::post('/scan/storeFeature', [FeatureController::class, 'storeFeature']);
-Route::post('/feature/store', [FeatureController::class, 'store']);
 Route::get('/feature/get', [FeatureController::class, 'getFeatures']);
 
 //SUBSCRIPTION HANDLING ENDPOINTS
 Route::middleware(['verify.user'])->group(function () {
+    //FEATURE ENDPOINTS
+    Route::post('/scan/storeFeature', [FeatureController::class, 'storeFeature']);
+    Route::post('/feature/store', [FeatureController::class, 'store']);
+
     //SUBSCRIPTIONS ENDPOINT
     Route::get('/Subscriptions/GetByUserIDorMerchantID', [SubscriptionController::class, 'GetByUserIDorMerchantID']);
     Route::post('/Subscriptions/customPackagePricing', [SubscriptionController::class, 'customPackagePricing']);

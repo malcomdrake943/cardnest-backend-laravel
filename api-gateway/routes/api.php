@@ -8,8 +8,7 @@ Route::post('auth/signup', [GatewayController::class, 'proxyToAuthService']);
 Route::post('auth/login', [GatewayController::class, 'proxyToAuthService']);
 
 //Features routes
-Route::any('feature/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
-Route::post('scan/storeFeature', [GatewayController::class, 'proxyToSubscriptionsService']);
+Route::any('feature/get', [GatewayController::class, 'proxyToSubscriptionsService']);
 
 // Protected routes (require JWT verification)
 Route::middleware(['auth.jwt'])->group(function () {
@@ -20,6 +19,8 @@ Route::middleware(['auth.jwt'])->group(function () {
     // Admin-only business profile decision route
     Route::middleware(['admin'])->post('business-profile/decision', [GatewayController::class, 'proxyToAuthService']);
 
+    Route::any('feature/store', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+    Route::post('scan/storeFeature', [GatewayController::class, 'proxyToSubscriptionsService']);
 
     // Standard business profile routes
     Route::any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');

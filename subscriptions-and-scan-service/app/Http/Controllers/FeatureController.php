@@ -117,7 +117,6 @@ class FeatureController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'auth_token'        => 'required|string',
             'bank_logo'         => 'nullable|boolean',
             'chip'              => 'nullable|boolean',
             'mag_strip'         => 'nullable|boolean',
@@ -127,15 +126,8 @@ class FeatureController extends Controller
             'symmetry'          => 'nullable|boolean',
         ]);
 
-        $payload = $this->decodeAuthToken($request->auth_token);
-        if (!$payload) {
-            return response()->json([
-                'code' => 400,
-                'message' => 'Invalid or expired auth token.'
-            ], 400);
-        }
 
-        $userId = $payload->get('sub');
+        $userId = $request->auth_user['id'];
 
         // Check if user exists via auth service
         if (!$this->userExists($userId)) {
@@ -161,7 +153,6 @@ class FeatureController extends Controller
     public function storeFeature(Request $request)
     {
         $request->validate([
-            'auth_token'        => 'required|string',
             'bank_logo'         => 'nullable|boolean',
             'chip'              => 'nullable|boolean',
             'mag_strip'         => 'nullable|boolean',
@@ -171,15 +162,7 @@ class FeatureController extends Controller
             'symmetry'          => 'nullable|boolean',
         ]);
 
-        $payload = $this->decodeAuthToken($request->auth_token);
-        if (!$payload) {
-            return response()->json([
-                'code' => 400,
-                'message' => 'Invalid or expired auth token.'
-            ], 400);
-        }
-
-        $userId = $payload->get('sub');
+        $userId = $request->auth_user['id'];
 
         // Check if user exists via auth service
         if (!$this->userExists($userId)) {

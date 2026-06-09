@@ -128,10 +128,22 @@ class FeatureController extends Controller
             ], 404);
         }
 
+        $formattedFeatures = $features->map(function ($feature) {
+            $attributes = $feature->toArray();
+            $metadataKeys = ['id', 'user_id', 'created_at', 'updated_at'];
+            
+            $data = array_diff_key($attributes, array_flip($metadataKeys));
+            $metadata = array_intersect_key($attributes, array_flip($metadataKeys));
+            
+            return array_merge($metadata, [
+                'data' => $data
+            ]);
+        });
+
         return response()->json([
             'code' => 200,
             'message' => 'Features retrieved successfully.',
-            'data' => $features
+            'data' => $formattedFeatures
         ], 200);
     }
 

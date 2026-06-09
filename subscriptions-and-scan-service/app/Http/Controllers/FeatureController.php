@@ -128,23 +128,20 @@ class FeatureController extends Controller
             ], 404);
         }
 
-        $formattedFeatures = $features->map(function ($feature) {
-            $attributes = $feature->toArray();
-            $metadataKeys = ['id', 'user_id', 'created_at', 'updated_at'];
-            
-            $data = array_diff_key($attributes, array_flip($metadataKeys));
-            $metadata = array_intersect_key($attributes, array_flip($metadataKeys));
-            
-            return array_merge($metadata, [
-                'data' => $data
-            ]);
+        $firstFeature = $features->first();
+        $metadataKeys = ['id', 'user_id', 'created_at', 'updated_at'];
+        $metadata = array_intersect_key($firstFeature->toArray(), array_flip($metadataKeys));
+
+        $data = $features->map(function ($feature) use ($metadataKeys) {
+            return array_diff_key($feature->toArray(), array_flip($metadataKeys));
         });
 
-        return response()->json([
+        return response()->json(array_merge([
             'code' => 200,
             'message' => 'Features retrieved successfully.',
-            'data' => $formattedFeatures
-        ], 200);
+        ], $metadata, [
+            'data' => $data
+        ]), 200);
     }
 
     public function store(Request $request)

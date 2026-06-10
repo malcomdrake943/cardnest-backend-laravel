@@ -16,6 +16,13 @@ Route::middleware(['auth.jwt'])->group(function () {
     // Gateway-level authenticated user details
     Route::get('auth/user', [GatewayController::class, 'getAuthenticatedUser']);
 
+    Route::get('device/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
+    Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
+    Route::post('user-device-info', [GatewayController::class, 'proxyToAuthService']);
+    Route::post('merchant-location', [GatewayController::class, 'proxyToAuthService']);
+    Route::get('user/{merchantId}/details', [GatewayController::class, 'proxyToAuthService']);
+    Route::get('location/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
+
     // Admin-only business profile decision route
     Route::middleware(['admin'])->post('business-profile/decision', [GatewayController::class, 'proxyToAuthService']);
 
@@ -26,13 +33,8 @@ Route::middleware(['auth.jwt'])->group(function () {
     Route::any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
 
     // Device and Location routes (proxied to Auth Service)
-    Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
-    Route::post('user-device-info', [GatewayController::class, 'proxyToAuthService']);
-    Route::post('merchant-location', [GatewayController::class, 'proxyToAuthService']);
-    Route::get('user/{merchantId}/details', [GatewayController::class, 'proxyToAuthService']);
-    Route::get('device/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
+
     Route::get('devices', [GatewayController::class, 'proxyToAuthService']);
-    Route::get('location/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
     Route::get('locations', [GatewayController::class, 'proxyToAuthService']);
 
     // Subscriptions, Packages, Merchant, Scan, and Card Scan routes (proxied to Subscriptions Service)

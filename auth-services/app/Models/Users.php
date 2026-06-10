@@ -17,6 +17,11 @@ class Users extends Authenticatable implements JWTSubject
 
     protected $table = 'users';
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\UserFactory::new();
+    }
+
     /**
      * The attributes that are mass assignable.
      *
@@ -67,12 +72,20 @@ class Users extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'device' => 'array',
+            'network' => 'array',
+            'sims' => 'array',
         ];
     }
 
     public function businessProfile()
     {
         return $this->hasOne(BusinessProfile::class, 'user_id');
+    }
+
+    public function locations()
+    {
+        return $this->hasMany(Location::class, 'user_id');
     }
 
     /**

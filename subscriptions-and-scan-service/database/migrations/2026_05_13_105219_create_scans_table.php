@@ -17,9 +17,9 @@ return new class extends Migration {
             $table->string('merchant_key')->nullable();
             $table->string('card_number_masked')->nullable();
             $table->string('status')->nullable();
-            $table->string('encrypted_data')->nullable();
+            $table->text('encrypted_data')->nullable();
             $table->string('scan_id')->nullable();
-            $table->foreignId('session_id')->nullable()->constrained('scan_sessions')->onDelete('cascade');
+            $table->string('session_id')->nullable();
             $table->string('failure_reason')->nullable();
             $table->string('failure_stage')->nullable();
             $table->timestamps();

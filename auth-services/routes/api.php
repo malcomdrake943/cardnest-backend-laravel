@@ -5,10 +5,24 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BusinessProfileController;
 use App\Http\Controllers\InternalController;
+use App\Http\Controllers\UserDeviceInfoController;
+use App\Http\Controllers\UserinfoDevince;
+use App\Http\Controllers\MerchantLocationController;
+use App\Http\Controllers\UserWithLocationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+// DEVICE AND LOCATION ROUTES
+Route::post('/device-info', [UserDeviceInfoController::class, 'store']);
+Route::post('/user-device-info', [UserinfoDevince::class, 'store']);
+Route::post('/merchant-location', [MerchantLocationController::class, 'store']);
+Route::get('/user/{merchantId}/details', [UserWithLocationController::class, 'getUserWithLocations']);
+Route::get('/device/merchant/{merchantId}', [UserDeviceInfoController::class, 'getByMerchant']);
+Route::get('/devices', [UserDeviceInfoController::class, 'getAllDevices']);
+Route::get('/location/merchant/{merchantId}', [MerchantLocationController::class, 'getByMerchant']);
+Route::get('/locations', [MerchantLocationController::class, 'getAll']);
 
 //LOGIN AND OTP ROUTES
 Route::post('signup', [AuthController::class, 'signup']);

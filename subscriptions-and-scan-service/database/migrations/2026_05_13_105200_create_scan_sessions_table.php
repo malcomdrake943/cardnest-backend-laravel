@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('device_type')->nullable();
             $table->integer('tries')->nullable();
             $table->string('encryption_key')->nullable();
-            $table->string('encrypted_data')->nullable();
+            $table->text('encrypted_data')->nullable();
             $table->date('scanned_at')->nullable();
             $table->timestamps();
         });

@@ -24,7 +24,10 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             PackageSeeder::class,
-            ScanSeeder::class,
+            ScanSessionSeeder::class,
+            CardScansNewSeeder::class,
+            SubscriptionsSeeder::class,
+            OldSubscriptionsSeeder::class,
         ]);
     }
 }

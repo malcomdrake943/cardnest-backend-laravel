@@ -25,6 +25,16 @@ Route::middleware(['auth.jwt'])->group(function () {
     // Standard business profile routes
     Route::any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
 
+    // Device and Location routes (proxied to Auth Service)
+    Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
+    Route::post('user-device-info', [GatewayController::class, 'proxyToAuthService']);
+    Route::post('merchant-location', [GatewayController::class, 'proxyToAuthService']);
+    Route::get('user/{merchantId}/details', [GatewayController::class, 'proxyToAuthService']);
+    Route::get('device/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
+    Route::get('devices', [GatewayController::class, 'proxyToAuthService']);
+    Route::get('location/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
+    Route::get('locations', [GatewayController::class, 'proxyToAuthService']);
+
     // Subscriptions, Packages, Merchant, Scan, and Card Scan routes (proxied to Subscriptions Service)
     Route::any('Subscriptions/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
     Route::any('Packages/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');

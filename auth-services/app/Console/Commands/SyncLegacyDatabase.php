@@ -264,17 +264,22 @@ class SyncLegacyDatabase extends Command
                 $lat = $loc->lat ?? $loc->latitude ?? null;
                 $lon = $loc->lon ?? $loc->lng ?? $loc->longitude ?? null;
 
+                // Find user_id in the new database by matching merchant_id
+                $userId = null;
+                if (!empty($loc->merchant_id)) {
+                    $userId = DB::table('users')->where('merchant_id', $loc->merchant_id)->value('id');
+                }
+
                 // Make sure referencing user exists to avoid foreign key violations
-                $userExists = DB::table('users')->where('id', $loc->user_id)->exists();
-                if ($loc->user_id && !$userExists) {
-                    $this->warn("Skipping location ID {$loc->id} because user_id {$loc->user_id} does not exist in the new database.");
+                if (!$userId) {
+                    $this->warn("Skipping location ID {$loc->id} because merchant_id {$loc->merchant_id} has no matching user in the new database.");
                     continue;
                 }
 
                 DB::table('locations')->updateOrInsert(
                     ['id' => $loc->id],
                     [
-                        'user_id' => $loc->user_id ?? null,
+                        'user_id' => $userId,
                         'merchant_id' => $loc->merchant_id ?? null,
                         'device_id' => $loc->device_id ?? null,
                         'lat' => $lat,

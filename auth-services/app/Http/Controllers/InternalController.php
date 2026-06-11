@@ -96,15 +96,17 @@ class InternalController extends Controller
             // Delete old logo if exists
             if ($profile->display_logo) {
                 Storage::disk('public')->delete($profile->display_logo);
+                Storage::disk('s3')->delete($profile->display_logo);
             }
 
             // Store new logo
-            $path = $request->file('display_logo')->store('businesslogo', 'public');
+            $path = $request->file('display_logo')->store('businesslogo', 's3');
             $profile->display_logo = $path;
         } elseif ($request->boolean('delete_logo')) {
             // Explicitly delete the logo
             if ($profile->display_logo) {
                 Storage::disk('public')->delete($profile->display_logo);
+                Storage::disk('s3')->delete($profile->display_logo);
             }
             $profile->display_logo = null;
         }
@@ -116,7 +118,7 @@ class InternalController extends Controller
             'message' => 'Merchant display information updated successfully.',
             'data' => [
                 'display_name' => $profile->display_name,
-                'display_logo' => $profile->display_logo ? asset('storage/' . $profile->display_logo) : null
+                'display_logo' => $profile->display_logo ? Storage::disk('s3')->url($profile->display_logo) : null
             ]
         ]);
     }
@@ -235,10 +237,11 @@ class InternalController extends Controller
             // Delete old logo if exists
             if ($profile && $profile->display_logo) {
                 Storage::disk('public')->delete($profile->display_logo);
+                Storage::disk('s3')->delete($profile->display_logo);
             }
 
             // Store new logo
-            $logoPath = $request->file('display_logo')->store('businesslogo', 'public');
+            $logoPath = $request->file('display_logo')->store('businesslogo', 's3');
         }
 
         if ($profile) {
@@ -268,7 +271,7 @@ class InternalController extends Controller
                 'id' => $profile->id,
                 'user_id' => $profile->user_id,
                 'display_name' => $profile->display_name,
-                'display_logo' => $profile->display_logo ? asset('storage/' . $profile->display_logo) : null
+                'display_logo' => $profile->display_logo ? Storage::disk('s3')->url($profile->display_logo) : null
             ]
         ]);
     }
@@ -300,7 +303,7 @@ class InternalController extends Controller
                 'id' => $user->businessProfile->id,
                 'user_id' => $user->businessProfile->user_id,
                 'display_name' => $user->businessProfile->display_name,
-                'display_logo' => $user->businessProfile->display_logo ? asset('storage/' . $user->businessProfile->display_logo) : null
+                'display_logo' => $user->businessProfile->display_logo ? Storage::disk('s3')->url($user->businessProfile->display_logo) : null
             ]
         ], 200);
     }
@@ -379,14 +382,14 @@ class InternalController extends Controller
                 // File keys are e.g. "sub_businesses_0_registration_document"
                 if ($request->hasFile("sub_businesses_{$index}_registration_document")) {
                     $regFile = $request->file("sub_businesses_{$index}_registration_document");
-                    $regPath = $regFile->store('business_documents', 'public');
-                    $registrationDocPath = asset('storage/' . $regPath);
+                    $regPath = $regFile->store('business_documents', 's3');
+                    $registrationDocPath = Storage::disk('s3')->url($regPath);
                 }
 
                 if ($request->hasFile("sub_businesses_{$index}_account_holder_id_document")) {
                     $idFile = $request->file("sub_businesses_{$index}_account_holder_id_document");
-                    $idPath = $idFile->store('kyc_documents', 'public');
-                    $idDocPath = asset('storage/' . $idPath);
+                    $idPath = $idFile->store('kyc_documents', 's3');
+                    $idDocPath = Storage::disk('s3')->url($idPath);
                 }
 
                 // 1. Create AccountHolder record

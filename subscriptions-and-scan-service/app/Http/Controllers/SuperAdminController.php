@@ -164,7 +164,7 @@ class SuperAdminController extends Controller
             $uniqueName = uniqid() . '_' . preg_replace('/[^A-Za-z0-9_\.\-]/', '_', $request->fileName);
             $path = 'documents/' . $uniqueName;
 
-            Storage::disk('public')->put($path, $fileData);
+            Storage::disk('s3')->put($path, $fileData);
 
             // Save to DB
             $doc = SuperAdmin::create([
@@ -204,7 +204,7 @@ class SuperAdminController extends Controller
 
         // Add file_url for each document
         $docs->transform(function ($doc) {
-            $doc->file_url = asset('storage/' . ltrim($doc->file_path, '/'));
+            $doc->file_url = Storage::disk('s3')->url($doc->file_path);
             return $doc;
         });
 

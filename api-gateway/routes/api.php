@@ -10,6 +10,8 @@ Route::post('auth/login', [GatewayController::class, 'proxyToAuthService']);
 //Features routes
 Route::any('feature/get', [GatewayController::class, 'proxyToSubscriptionsService']);
 
+Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
+
 // Protected routes (require JWT verification)
 Route::middleware(['auth.jwt'])->group(function () {
 
@@ -17,7 +19,6 @@ Route::middleware(['auth.jwt'])->group(function () {
     Route::get('auth/user', [GatewayController::class, 'getAuthenticatedUser']);
 
     Route::get('device/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
-    Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
     Route::post('user-device-info', [GatewayController::class, 'proxyToAuthService']);
     Route::post('merchant-location', [GatewayController::class, 'proxyToAuthService']);
     Route::get('user/{merchantId}/details', [GatewayController::class, 'proxyToAuthService']);

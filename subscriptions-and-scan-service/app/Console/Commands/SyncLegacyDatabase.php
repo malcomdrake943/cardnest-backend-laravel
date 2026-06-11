@@ -192,21 +192,38 @@ class SyncLegacyDatabase extends Command
     }
 
     /**
-     * Synchronize the scans table in chunks
+     * Synchronize the scans table in chunks with legacy name fallbacks
      */
     private function syncScans()
     {
         $this->info("Syncing scans...");
         
-        if (!Schema::connection('legacy')->hasTable('scans')) {
-            $this->warn("Legacy table 'scans' does not exist. Skipping scans sync.");
+        $tableName = null;
+        if (Schema::connection('legacy')->hasTable('card_scans')) {
+            $tableName = 'card_scans';
+        }
+
+        if (!$tableName) {
+            $this->warn("Legacy scans table does not exist under names: 'scans', 'card_scans', or 'card_scans_new'.");
+            try {
+                $tables = DB::connection('legacy')->select('SHOW TABLES');
+                $this->info("Legacy database tables found:");
+                foreach ($tables as $table) {
+                    $tableNameVal = array_values((array)$table)[0];
+                    $this->line("- " . $tableNameVal);
+                }
+            } catch (\Exception $e) {
+                $this->error("Could not list legacy tables: " . $e->getMessage());
+            }
+            $this->warn("Skipping scans sync.");
             return;
         }
 
+        $this->info("Using legacy scans table: '{$tableName}'");
         $lastSync = $this->getLastSyncTimestamp('scans');
 
         $query = DB::connection('legacy')
-            ->table('scans')
+            ->table($tableName)
             ->whereIn('merchant_id', $this->allowedMerchantIds)
             ->where('updated_at', '>', $lastSync)
             ->orderBy('id', 'asc');

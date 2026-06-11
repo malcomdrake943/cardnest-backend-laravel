@@ -96,25 +96,34 @@ class SyncLegacyDatabase extends Command
      */
     private function syncSubscriptions()
     {
-        $this->info("Syncing subscriptions...");
+        $this->syncSubscriptionTable('subscriptions', 'active');
+        $this->syncSubscriptionTable('old_subscriptions', 'in-active');
+    }
+
+    /**
+     * Synchronize a specific legacy subscriptions table in chunks
+     */
+    private function syncSubscriptionTable($legacyTableName, $statusOverride = null)
+    {
+        $this->info("Syncing subscriptions from legacy '{$legacyTableName}' table...");
         
-        if (!Schema::connection('legacy')->hasTable('subscriptions')) {
-            $this->warn("Legacy table 'subscriptions' does not exist. Skipping subscriptions sync.");
+        if (!Schema::connection('legacy')->hasTable($legacyTableName)) {
+            $this->warn("Legacy table '{$legacyTableName}' does not exist. Skipping.");
             return;
         }
 
-        $lastSync = $this->getLastSyncTimestamp('subscriptions');
+        $lastSync = $this->getLastSyncTimestamp($legacyTableName);
 
         $query = DB::connection('legacy')
-            ->table('subscriptions')
+            ->table($legacyTableName)
             ->whereIn('merchant_id', $this->allowedMerchantIds)
             ->where('updated_at', '>', $lastSync)
             ->orderBy('id', 'asc');
 
         $count = $query->count();
-        $this->info("Found {$count} new or updated subscription(s) to sync.");
+        $this->info("Found {$count} record(s) to sync.");
 
-        $query->chunk(200, function ($legacySubs) {
+        $query->chunk(200, function ($legacySubs) use ($statusOverride) {
             foreach ($legacySubs as $sub) {
                 // Ensure referenced package exists to prevent foreign key violation
                 $packageExists = DB::table('packages')->where('id', $sub->package_id)->exists();
@@ -133,7 +142,7 @@ class SyncLegacyDatabase extends Command
                         'api_call_limit' => $sub->api_call_limit ?? null,
                         'api_calls_used' => $sub->api_calls_used ?? null,
                         'overage_calls' => $sub->overage_calls ?? null,
-                        'status' => $sub->status ?? null,
+                        'status' => $statusOverride ?? $sub->status ?? null,
                         'subscription_date' => $sub->subscription_date ?? null,
                         'renewal_date' => $sub->renewal_date ?? null,
                         'created_at' => $sub->created_at ?? Carbon::now(),
@@ -143,7 +152,7 @@ class SyncLegacyDatabase extends Command
             }
         });
 
-        $this->updateLastSyncTimestamp('subscriptions');
+        $this->updateLastSyncTimestamp($legacyTableName);
     }
 
     /**

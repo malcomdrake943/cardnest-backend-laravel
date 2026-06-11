@@ -196,7 +196,7 @@ class SyncLegacyDatabase extends Command
                         DB::table('account_holders')
                             ->where('id', $existingProfile->account_holder_id)
                             ->update($accountHolderData);
-                        
+
                         $accountHolderId = $existingProfile->account_holder_id;
                     } else {
                         // Create new account holder
@@ -240,7 +240,7 @@ class SyncLegacyDatabase extends Command
     private function syncLocations()
     {
         $this->info("Syncing locations...");
-        
+
         // Double check if legacy locations table exists first
         if (!Schema::connection('legacy')->hasTable('locations')) {
             $this->warn("Legacy table 'locations' does not exist. Skipping locations sync.");
@@ -250,7 +250,7 @@ class SyncLegacyDatabase extends Command
         $lastSync = $this->getLastSyncTimestamp('locations');
 
         $query = DB::connection('legacy')
-            ->table('locations')
+            ->table('merchant_locations')
             ->whereIn('merchant_id', $this->allowedMerchantIds)
             ->where('updated_at', '>', $lastSync)
             ->orderBy('id', 'asc');

@@ -242,8 +242,8 @@ class SyncLegacyDatabase extends Command
         $this->info("Syncing locations...");
 
         // Double check if legacy locations table exists first
-        if (!Schema::connection('legacy')->hasTable('locations')) {
-            $this->warn("Legacy table 'locations' does not exist. Skipping locations sync.");
+        if (!Schema::connection('legacy')->hasTable('merchant_locations')) {
+            $this->warn("Legacy table 'merchant_locations' does not exist. Skipping locations sync.");
             return;
         }
 

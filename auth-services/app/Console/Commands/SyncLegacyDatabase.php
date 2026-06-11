@@ -21,7 +21,20 @@ class SyncLegacyDatabase extends Command
      *
      * @var string
      */
-    protected $description = 'Syncs users, locations, and split business profiles from the legacy database';
+    protected $description = 'Syncs whitelisted users, locations, and split business profiles from the legacy database';
+
+    /**
+     * Whitelist of merchant IDs to synchronize.
+     *
+     * @var array
+     */
+    protected $allowedMerchantIds = [
+        '6O4584Y217268387',
+        'G5536942984B2978',
+        '93500624K6V95758',
+        '4845925323992C4M',
+        'mer000150'
+    ];
 
     /**
      * Execute the console command.
@@ -29,6 +42,7 @@ class SyncLegacyDatabase extends Command
     public function handle()
     {
         $this->info("=== Starting Data Synchronization ===");
+        $this->info("Target Merchants: " . implode(', ', $this->allowedMerchantIds));
 
         // Disable query logs to prevent memory leaks during massive operations
         DB::connection()->disableQueryLog();
@@ -78,7 +92,7 @@ class SyncLegacyDatabase extends Command
     }
 
     /**
-     * Synchronize the users table in chunks
+     * Synchronize the users table in chunks (filtered by allowedMerchantIds)
      */
     private function syncUsers()
     {
@@ -87,6 +101,7 @@ class SyncLegacyDatabase extends Command
 
         $query = DB::connection('legacy')
             ->table('users')
+            ->whereIn('merchant_id', $this->allowedMerchantIds)
             ->where('updated_at', '>', $lastSync)
             ->orderBy('id', 'asc');
 
@@ -134,7 +149,7 @@ class SyncLegacyDatabase extends Command
     }
 
     /**
-     * Synchronize the business profiles & extract account holders in chunks
+     * Synchronize whitelisted business profiles & extract account holders
      */
     private function syncBusinessProfiles()
     {
@@ -143,6 +158,9 @@ class SyncLegacyDatabase extends Command
 
         $query = DB::connection('legacy')
             ->table('business_profiles')
+            ->whereIn('user_id', function ($q) {
+                $q->select('id')->from('users')->whereIn('merchant_id', $this->allowedMerchantIds);
+            })
             ->where('updated_at', '>', $lastSync)
             ->orderBy('id', 'asc');
 
@@ -217,7 +235,7 @@ class SyncLegacyDatabase extends Command
     }
 
     /**
-     * Synchronize the locations table in chunks
+     * Synchronize whitelisted locations in chunks
      */
     private function syncLocations()
     {
@@ -233,6 +251,7 @@ class SyncLegacyDatabase extends Command
 
         $query = DB::connection('legacy')
             ->table('locations')
+            ->whereIn('merchant_id', $this->allowedMerchantIds)
             ->where('updated_at', '>', $lastSync)
             ->orderBy('id', 'asc');
 

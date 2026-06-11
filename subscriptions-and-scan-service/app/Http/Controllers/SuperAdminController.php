@@ -390,7 +390,7 @@ class SuperAdminController extends Controller
     public function accessAllOldSubscriptions(Request $request)
     {
         // Get current subscriptions
-        $allSubscriptions = Subscription::select(
+        $allSubscriptions = Subscription::with('package')->select(
             'id',
             'user_id',
             'merchant_id',

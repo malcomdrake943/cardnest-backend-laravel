@@ -226,7 +226,7 @@ class SubscriptionController extends Controller
         }
 
         // Retrieve all subscriptions from the single 'subscriptions' table
-        $subscriptions = Subscription::where('merchant_id', $merchantId)
+        $subscriptions = Subscription::with('package')->where('merchant_id', $merchantId)
             ->latest()
             ->get();
 

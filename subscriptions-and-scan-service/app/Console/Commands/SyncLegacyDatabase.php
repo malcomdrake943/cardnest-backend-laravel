@@ -21,7 +21,7 @@ class SyncLegacyDatabase extends Command
      *
      * @var string
      */
-    protected $description = 'Syncs whitelisted subscriptions, scan sessions, and scans from the legacy database';
+    protected $description = 'Syncs packages, whitelisted subscriptions, scan sessions, and scans from the legacy database';
 
     /**
      * Whitelist of merchant IDs to synchronize.
@@ -66,7 +66,8 @@ class SyncLegacyDatabase extends Command
         // Initialize the log table if it doesn't exist
         $this->ensureSyncLogTableExists();
 
-        // Sync steps
+        // Sync steps (Sync packages first so foreign keys are resolved for subscriptions)
+        $this->syncPackages();
         $this->syncSubscriptions();
         $this->syncScanSessions();
         $this->syncScans();
@@ -89,6 +90,50 @@ class SyncLegacyDatabase extends Command
                 $table->timestamps();
             });
         }
+    }
+
+    /**
+     * Synchronize the packages table in chunks
+     */
+    private function syncPackages()
+    {
+        $this->info("Syncing packages...");
+        
+        $tableName = 'default_packages';
+        if (!Schema::connection('legacy')->hasTable($tableName)) {
+            $this->warn("Legacy table '{$tableName}' does not exist. Skipping packages sync.");
+            return;
+        }
+
+        $lastSync = $this->getLastSyncTimestamp('packages');
+
+        $query = DB::connection('legacy')
+            ->table($tableName)
+            ->where('updated_at', '>', $lastSync)
+            ->orderBy('id', 'asc');
+
+        $count = $query->count();
+        $this->info("Found {$count} new or updated package(s) to sync.");
+
+        $query->chunk(200, function ($legacyPackages) {
+            foreach ($legacyPackages as $pkg) {
+                DB::table('packages')->updateOrInsert(
+                    ['id' => $pkg->id],
+                    [
+                        'package_name' => $pkg->package_name ?? null,
+                        'package_price' => $pkg->package_price ?? null,
+                        'package_period' => $pkg->package_period ?? null,
+                        'package_description' => $pkg->package_description ?? null,
+                        'monthly_limit' => $pkg->monthly_limit ?? null,
+                        'overage_rate' => $pkg->overage_rate ?? null,
+                        'created_at' => $pkg->created_at ?? Carbon::now(),
+                        'updated_at' => $pkg->updated_at ?? Carbon::now(),
+                    ]
+                );
+            }
+        });
+
+        $this->updateLastSyncTimestamp('packages');
     }
 
     /**
@@ -213,7 +258,7 @@ class SyncLegacyDatabase extends Command
         }
 
         if (!$tableName) {
-            $this->warn("Legacy scans table does not exist under names: 'scans', 'card_scans', or 'card_scans_new'.");
+            $this->warn("Legacy scans table does not exist under name: 'card_scans'.");
             try {
                 $tables = DB::connection('legacy')->select('SHOW TABLES');
                 $this->info("Legacy database tables found:");

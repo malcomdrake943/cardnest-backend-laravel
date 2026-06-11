@@ -143,12 +143,18 @@ class BusinessProfileController extends Controller
             $registrationFile = $request->file('registration_document');
             $registrationFileName = time() . '_registration_' . $registrationFile->getClientOriginalName();
             $registrationFilePath = $registrationFile->storeAs('business_documents', $registrationFileName, 's3');
+            if ($registrationFilePath === false || $registrationFilePath === '') {
+                throw new \Exception("Failed to upload registration document to S3. Please verify your AWS credentials and configuration.");
+            }
             $registrationPublicUrl = Storage::disk('s3')->url($registrationFilePath);
 
             // Handle ID document upload
             $idFile = $request->file('account_holder_id_document');
             $idFileName = time() . '_id_' . $idFile->getClientOriginalName();
             $idFilePath = $idFile->storeAs('kyc_documents', $idFileName, 's3');
+            if ($idFilePath === false || $idFilePath === '') {
+                throw new \Exception("Failed to upload ID document to S3. Please verify your AWS credentials and configuration.");
+            }
             $idPublicUrl = Storage::disk('s3')->url($idFilePath);
 
             // Check if business profile exists
@@ -190,18 +196,28 @@ class BusinessProfileController extends Controller
                 // Delete old files if they exist (handles both legacy public storage and new s3 storage)
                 if ($businessProfile->registration_document_path) {
                     $parsedPath = parse_url($businessProfile->registration_document_path, PHP_URL_PATH);
-                    if (str_starts_with($parsedPath, '/storage/')) {
-                        Storage::disk('public')->delete(substr($parsedPath, 9));
-                    } else {
-                        Storage::disk('s3')->delete(ltrim($parsedPath, '/'));
+                    if ($parsedPath) {
+                        if (str_starts_with($parsedPath, '/storage/')) {
+                            Storage::disk('public')->delete(substr($parsedPath, 9));
+                        } else {
+                            $cleanPath = ltrim($parsedPath, '/');
+                            if ($cleanPath !== '') {
+                                Storage::disk('s3')->delete($cleanPath);
+                            }
+                        }
                     }
                 }
                 if ($account_holder && $account_holder->id_document_path) {
                     $parsedPath = parse_url($account_holder->id_document_path, PHP_URL_PATH);
-                    if (str_starts_with($parsedPath, '/storage/')) {
-                        Storage::disk('public')->delete(substr($parsedPath, 9));
-                    } else {
-                        Storage::disk('s3')->delete(ltrim($parsedPath, '/'));
+                    if ($parsedPath) {
+                        if (str_starts_with($parsedPath, '/storage/')) {
+                            Storage::disk('public')->delete(substr($parsedPath, 9));
+                        } else {
+                            $cleanPath = ltrim($parsedPath, '/');
+                            if ($cleanPath !== '') {
+                                Storage::disk('s3')->delete($cleanPath);
+                            }
+                        }
                     }
                 }
 
@@ -276,10 +292,10 @@ class BusinessProfileController extends Controller
             ], $statusCode);
         } catch (\Exception $e) {
             // Delete any uploaded files if something went wrong
-            if (isset($registrationFilePath)) {
+            if (isset($registrationFilePath) && is_string($registrationFilePath) && $registrationFilePath !== '') {
                 Storage::disk('s3')->delete($registrationFilePath);
             }
-            if (isset($idFilePath)) {
+            if (isset($idFilePath) && is_string($idFilePath) && $idFilePath !== '') {
                 Storage::disk('s3')->delete($idFilePath);
             }
 

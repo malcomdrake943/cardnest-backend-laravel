@@ -79,48 +79,59 @@ class InternalController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthorized internal request'], 401);
         }
 
-        $merchantId = $request->input('merchant_id');
-        $user = Users::where('merchant_id', $merchantId)->with('businessProfile')->first();
+        try {
+            $merchantId = $request->input('merchant_id');
+            $user = Users::where('merchant_id', $merchantId)->with('businessProfile')->first();
 
-        if (!$user || !$user->businessProfile) {
-            return response()->json(['status' => false, 'message' => 'Business profile not found'], 404);
-        }
-
-        $profile = $user->businessProfile;
-
-        if ($request->has('display_name')) {
-            $profile->display_name = $request->display_name;
-        }
-
-        if ($request->hasFile('display_logo')) {
-            // Delete old logo if exists
-            if ($profile->display_logo) {
-                Storage::disk('public')->delete($profile->display_logo);
-                Storage::disk('s3')->delete($profile->display_logo);
+            if (!$user || !$user->businessProfile) {
+                return response()->json(['status' => false, 'message' => 'Business profile not found'], 404);
             }
 
-            // Store new logo
-            $path = $request->file('display_logo')->store('businesslogo', 's3');
-            $profile->display_logo = $path;
-        } elseif ($request->boolean('delete_logo')) {
-            // Explicitly delete the logo
-            if ($profile->display_logo) {
-                Storage::disk('public')->delete($profile->display_logo);
-                Storage::disk('s3')->delete($profile->display_logo);
+            $profile = $user->businessProfile;
+
+            if ($request->has('display_name')) {
+                $profile->display_name = $request->display_name;
             }
-            $profile->display_logo = null;
+
+            if ($request->hasFile('display_logo')) {
+                // Delete old logo if exists
+                if ($profile->display_logo && $profile->display_logo !== '') {
+                    Storage::disk('public')->delete($profile->display_logo);
+                    Storage::disk('s3')->delete($profile->display_logo);
+                }
+
+                // Store new logo
+                $path = $request->file('display_logo')->store('businesslogo', 's3');
+                if ($path === false || $path === '') {
+                    throw new \Exception("Failed to upload display logo to S3. Please verify your AWS credentials and configuration.");
+                }
+                $profile->display_logo = $path;
+            } elseif ($request->boolean('delete_logo')) {
+                // Explicitly delete the logo
+                if ($profile->display_logo && $profile->display_logo !== '') {
+                    Storage::disk('public')->delete($profile->display_logo);
+                    Storage::disk('s3')->delete($profile->display_logo);
+                }
+                $profile->display_logo = null;
+            }
+
+            $profile->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Merchant display information updated successfully.',
+                'data' => [
+                    'display_name' => $profile->display_name,
+                    'display_logo' => $profile->display_logo ? Storage::disk('s3')->url($profile->display_logo) : null
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $profile->save();
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Merchant display information updated successfully.',
-            'data' => [
-                'display_name' => $profile->display_name,
-                'display_logo' => $profile->display_logo ? Storage::disk('s3')->url($profile->display_logo) : null
-            ]
-        ]);
     }
 
     /**
@@ -216,64 +227,75 @@ class InternalController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthorized internal request'], 401);
         }
 
-        $userId = $request->input('user_id');
-        $user = Users::where('id', $userId)->with('businessProfile')->first();
+        try {
+            $userId = $request->input('user_id');
+            $user = Users::where('id', $userId)->with('businessProfile')->first();
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found with this ID',
+                    'code' => 404
+                ], 404);
+            }
+
+            $profile = $user->businessProfile;
+
+            $displayName = $request->input('display_name');
+
+            // Handle display logo upload
+            $logoPath = null;
+            if ($request->hasFile('display_logo')) {
+                // Delete old logo if exists
+                if ($profile && $profile->display_logo && $profile->display_logo !== '') {
+                    Storage::disk('public')->delete($profile->display_logo);
+                    Storage::disk('s3')->delete($profile->display_logo);
+                }
+
+                // Store new logo
+                $logoPath = $request->file('display_logo')->store('businesslogo', 's3');
+                if ($logoPath === false || $logoPath === '') {
+                    throw new \Exception("Failed to upload display logo to S3. Please verify your AWS credentials and configuration.");
+                }
+            }
+
+            if ($profile) {
+                if ($displayName) {
+                    $profile->display_name = $displayName;
+                }
+                if ($logoPath) {
+                    $profile->display_logo = $logoPath;
+                }
+                $profile->save();
+                $wasRecentlyCreated = false;
+            } else {
+                // Create a brand new business profile if one doesn't exist
+                $profile = BusinessProfile::create([
+                    'user_id' => $userId,
+                    'display_name' => $displayName,
+                    'business_name' => $displayName, // Fallback
+                    'display_logo' => $logoPath
+                ]);
+                $wasRecentlyCreated = true;
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Business profile ' . ($wasRecentlyCreated ? 'created' : 'updated') . ' successfully',
+                'data' => [
+                    'id' => $profile->id,
+                    'user_id' => $profile->user_id,
+                    'display_name' => $profile->display_name,
+                    'display_logo' => $profile->display_logo ? Storage::disk('s3')->url($profile->display_logo) : null
+                ]
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'User not found with this ID',
-                'code' => 404
-            ], 404);
+                'message' => 'Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $profile = $user->businessProfile;
-
-        $displayName = $request->input('display_name');
-
-        // Handle display logo upload
-        $logoPath = null;
-        if ($request->hasFile('display_logo')) {
-            // Delete old logo if exists
-            if ($profile && $profile->display_logo) {
-                Storage::disk('public')->delete($profile->display_logo);
-                Storage::disk('s3')->delete($profile->display_logo);
-            }
-
-            // Store new logo
-            $logoPath = $request->file('display_logo')->store('businesslogo', 's3');
-        }
-
-        if ($profile) {
-            if ($displayName) {
-                $profile->display_name = $displayName;
-            }
-            if ($logoPath) {
-                $profile->display_logo = $logoPath;
-            }
-            $profile->save();
-            $wasRecentlyCreated = false;
-        } else {
-            // Create a brand new business profile if one doesn't exist
-            $profile = BusinessProfile::create([
-                'user_id' => $userId,
-                'display_name' => $displayName,
-                'business_name' => $displayName, // Fallback
-                'display_logo' => $logoPath
-            ]);
-            $wasRecentlyCreated = true;
-        }
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Business profile ' . ($wasRecentlyCreated ? 'created' : 'updated') . ' successfully',
-            'data' => [
-                'id' => $profile->id,
-                'user_id' => $profile->user_id,
-                'display_name' => $profile->display_name,
-                'display_logo' => $profile->display_logo ? Storage::disk('s3')->url($profile->display_logo) : null
-            ]
-        ]);
     }
 
     /**
@@ -383,12 +405,18 @@ class InternalController extends Controller
                 if ($request->hasFile("sub_businesses_{$index}_registration_document")) {
                     $regFile = $request->file("sub_businesses_{$index}_registration_document");
                     $regPath = $regFile->store('business_documents', 's3');
+                    if ($regPath === false || $regPath === '') {
+                        throw new \Exception("Failed to upload sub-business registration document to S3. Please verify your AWS credentials and configuration.");
+                    }
                     $registrationDocPath = Storage::disk('s3')->url($regPath);
                 }
 
                 if ($request->hasFile("sub_businesses_{$index}_account_holder_id_document")) {
                     $idFile = $request->file("sub_businesses_{$index}_account_holder_id_document");
                     $idPath = $idFile->store('kyc_documents', 's3');
+                    if ($idPath === false || $idPath === '') {
+                        throw new \Exception("Failed to upload sub-business ID document to S3. Please verify your AWS credentials and configuration.");
+                    }
                     $idDocPath = Storage::disk('s3')->url($idPath);
                 }
 

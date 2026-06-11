@@ -30,10 +30,10 @@ return new class extends Migration {
             $table->string('device_id')->nullable();
             $table->string('session_id')->nullable();
             $table->string('device_timestamp')->nullable();
-            $table->string('device')->nullable();
-            $table->string('network')->nullable();
-            $table->string('sims')->nullable();
-            $table->string('location')->nullable();
+            $table->text('device')->nullable();
+            $table->text('network')->nullable();
+            $table->text('sims')->nullable();
+            $table->text('location')->nullable();
             $table->timestamps();
         });
 

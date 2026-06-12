@@ -54,6 +54,7 @@ Route::middleware(['verify.user'])->group(function () {
     Route::get('/superadmin/access-all-scans', [SuperAdminController::class, 'accessAllScans']);  //list of merchants(merchant_id, business_name, total scans, success_rate(card_scan status), number_of_merchants)
     Route::get('/superadmin/access-all-scans/{id?}', [SuperAdminController::class, 'scanDetail']); //jiski id uske scans, encrypted_data + encrypted_key, on card_scans table based on status, total number of success and failure 
     Route::get('/superadmin/access-all-old-subscriptions', [SuperAdminController::class, 'accessAllOldSubscriptions']);
+    Route::get('/superadmin/getDocumentation', [SuperAdminController::class, 'getSuperAdminDocumentation']);
     Route::post('/superadmin/store', [SuperAdminController::class, 'store']);
     Route::get('/superadmin/show', [SuperAdminController::class, 'show']);
     Route::post('/superadmin/sub-business-store', [SuperAdminController::class, 'sub_business_store']);

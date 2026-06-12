@@ -215,6 +215,31 @@ class SuperAdminController extends Controller
         ], 200);
     }
 
+    public function getSuperAdminDocumentation(\Illuminate\Http\Request $request)
+    {
+        $docs = SuperAdmin::all();
+
+        if ($docs->isEmpty()) {
+            return response()->json([
+                'status' => 'not_found',
+                'message' => 'No documentation found.',
+                'data' => []
+            ], 404);
+        }
+
+        // Add file_url for each document
+        $docs->transform(function ($doc) {
+            $doc->file_url = asset('storage/' . ltrim($doc->file_path, '/'));
+            return $doc;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Documentation list retrieved.',
+            'data' => $docs
+        ], 200);
+    }
+
     /**
      * Grant sub-admin access by updating user role.
      * Communicates with Auth Service internally to update roles in the primary users table.

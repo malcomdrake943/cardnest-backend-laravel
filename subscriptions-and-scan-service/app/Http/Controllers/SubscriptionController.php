@@ -195,7 +195,9 @@ class SubscriptionController extends Controller
     public function getOldSubscriptions(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'id' => 'required',
+            'id' => 'nullable',
+            'merchant_id' => 'nullable',
+            'merchantId' => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -212,16 +214,16 @@ class SubscriptionController extends Controller
 
         // Determine merchant_id to query based on user role and request inputs
         if ($isSuperAdmin) {
-            $merchantId = $request->id ?? $request->merchant_id ?? ($authUser['merchant_id'] ?? null);
+            $merchantId = $request->merchant_id ?? $request->merchantId ?? $request->id ?? ($authUser['merchant_id'] ?? null);
         } else {
-            $merchantId = $authUser['merchant_id'] ?? $request->merchant_id;
+            $merchantId = $authUser['merchant_id'] ?? $request->merchant_id ?? $request->merchantId;
         }
 
         if (!$merchantId) {
             return response()->json([
                 'status' => false,
                 'message' => 'Validation Error',
-                'errors' => ['id' => ['The merchant ID is required.']]
+                'errors' => ['merchant_id' => ['The merchant ID is required.']]
             ], 422);
         }
 

@@ -329,20 +329,43 @@ class SuperAdminController extends Controller
             ->groupBy('merchant_id')
             ->get();
 
+        // Map scans data
+        $scanStats = [];
+        foreach ($scansAggregation as $agg) {
+            $scanStats[$agg->merchant_id] = [
+                'total_scans' => (int) $agg->total_scans,
+                'success_scans' => (int) $agg->success_scans,
+            ];
+        }
+
         $merchantsData = [];
 
-        foreach ($scansAggregation as $agg) {
-            $merchantId = $agg->merchant_id;
-            $totalScans = (int) $agg->total_scans;
-            $successScans = (int) $agg->success_scans;
-
+        // Loop through all merchants retrieved from Auth Service to include those with 0 scans
+        foreach ($businessNamesMap as $merchantId => $businessName) {
+            $stats = $scanStats[$merchantId] ?? ['total_scans' => 0, 'success_scans' => 0];
+            $totalScans = $stats['total_scans'];
+            $successScans = $stats['success_scans'];
             $successRate = $totalScans > 0 ? round(($successScans / $totalScans) * 100, 2) . '%' : '0%';
-
-            $businessName = $businessNamesMap[$merchantId] ?? ('Merchant (' . $merchantId . ')');
 
             $merchantsData[] = [
                 'merchant_id' => $merchantId,
                 'business_name' => $businessName,
+                'total_scans' => $totalScans,
+                'success_rate' => $successRate,
+            ];
+
+            unset($scanStats[$merchantId]);
+        }
+
+        // Add any remaining merchants found in scans that weren't in businessNamesMap
+        foreach ($scanStats as $merchantId => $stats) {
+            $totalScans = $stats['total_scans'];
+            $successScans = $stats['success_scans'];
+            $successRate = $totalScans > 0 ? round(($successScans / $totalScans) * 100, 2) . '%' : '0%';
+
+            $merchantsData[] = [
+                'merchant_id' => $merchantId,
+                'business_name' => 'Merchant (' . $merchantId . ')',
                 'total_scans' => $totalScans,
                 'success_rate' => $successRate,
             ];
@@ -364,9 +387,11 @@ class SuperAdminController extends Controller
      * @param  string|null  $id  Merchant ID
      * @return \Illuminate\Http\JsonResponse
      */
-    public function scanDetail($id = null)
+    public function scanDetail(Request $request, $id = null)
     {
-        if (!$id) {
+        $merchantId = $id ?? $request->input('merchant_id') ?? $request->input('merchantId') ?? $request->input('id');
+
+        if (!$merchantId) {
             return response()->json([
                 'status' => false,
                 'message' => 'Merchant ID is required.'
@@ -391,7 +416,7 @@ class SuperAdminController extends Controller
             'scan_sessions.encryption_key'
         )
             ->leftJoin('scan_sessions', 'scans.scan_id', '=', 'scan_sessions.scan_id')
-            ->where('scans.merchant_id', $id)
+            ->where('scans.merchant_id', $merchantId)
             ->latest('scans.created_at')
             ->get();
 

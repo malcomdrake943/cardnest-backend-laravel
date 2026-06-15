@@ -39,7 +39,7 @@ class MerchantController extends Controller
         }
 
         // Call the Auth Service internally to get the Merchant's Business Profile
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/verify-user';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/verify-user';
 
         try {
             $response = Http::withHeaders([
@@ -64,7 +64,7 @@ class MerchantController extends Controller
             $logoUrl = null;
             if ($profile && isset($profile['display_logo'])) {
                 // Since this is a microservice, the asset URL should point to the Auth Service's storage or a shared CDN
-                $authBaseUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000');
+                $authBaseUrl = config('services.internal.auth', 'http://localhost:8001');
                 $logoUrl = $authBaseUrl . '/storage/' . $profile['display_logo'];
             }
 
@@ -108,7 +108,7 @@ class MerchantController extends Controller
         }
 
         // Call the Auth Service internally to get the Merchant's Business Profile
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/verify-user';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/verify-user';
 
         try {
             $response = Http::withHeaders([
@@ -132,7 +132,7 @@ class MerchantController extends Controller
             // Format the logo URL
             $logoUrl = null;
             if ($profile && isset($profile['display_logo'])) {
-                $authBaseUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000');
+                $authBaseUrl = config('services.internal.auth', 'http://localhost:8001');
                 $logoUrl = $authBaseUrl . '/storage/' . $profile['display_logo'];
             }
 
@@ -177,7 +177,7 @@ class MerchantController extends Controller
         }
 
         // Forward the request to Auth Service
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/update-profile';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/update-profile';
 
         try {
             $httpRequest = Http::withHeaders([
@@ -243,7 +243,7 @@ class MerchantController extends Controller
         }
 
         // Forward the request to Auth Service
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/update-profile';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/update-profile';
 
         try {
             $httpRequest = Http::withHeaders([

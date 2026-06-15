@@ -38,7 +38,7 @@ class ScanController extends Controller
         }
 
         // 2. Fetch Merchant Data from Auth Service
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/verify-user';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/verify-user';
 
         try {
             $authResponse = Http::withHeaders([
@@ -118,7 +118,7 @@ class ScanController extends Controller
 
         $jwtToken = JWTAuth::customClaims($customClaims)->fromUser($user);
 
-        $key = hex2bin(env('AES_256_KEY'));
+        $key = hex2bin(config('services.internal.aes_key'));
         $encryptedToken = base64_encode(openssl_encrypt(
             $jwtToken,
             'AES-256-ECB',
@@ -187,7 +187,7 @@ class ScanController extends Controller
 
         // Encrypt JWT using AES-256
         try {
-            $key = hex2bin(env('AES_256_KEY'));
+            $key = hex2bin(config('services.internal.aes_key'));
             if ($key === false || strlen($key) !== 32) {
                 throw new \Exception('Invalid AES key length');
             }
@@ -234,7 +234,7 @@ class ScanController extends Controller
 
         // 2. MICROSERVICE SYNC: Notify Auth Service to record the usage
         try {
-            $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/record-scan';
+            $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/record-scan';
 
             // We use an asynchronous-like approach or just a fire-and-forget 
             // so we don't slow down the mobile app response.
@@ -291,7 +291,7 @@ class ScanController extends Controller
             $encryptedToken = $request->authToken;
 
             // Convert HEX key → 32-byte binary key
-            $key = hex2bin(env('AES_256_KEY'));
+            $key = hex2bin(config('services.internal.aes_key'));
 
             if ($key === false || strlen($key) !== 32) {
                 return response()->json([

@@ -34,7 +34,7 @@ class SuperAdminController extends Controller
         }
 
         // Call the Auth Service internally to update/create the business profile
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/superadmin/store-business-profile';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/superadmin/store-business-profile';
 
         try {
             $httpRequest = Http::withHeaders([
@@ -98,7 +98,7 @@ class SuperAdminController extends Controller
         }
 
         // Call the Auth Service internally to retrieve the business profile
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/superadmin/show-business-profile';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/superadmin/show-business-profile';
 
         try {
             $response = Http::withHeaders([
@@ -261,7 +261,7 @@ class SuperAdminController extends Controller
         }
 
         // Call the Auth Service internally to update the role in the primary database
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/update-role';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/update-role';
 
         try {
             $response = Http::withHeaders([
@@ -301,7 +301,7 @@ class SuperAdminController extends Controller
     public function accessAllScans(Request $request)
     {
         // Fetch all business profiles/names from Auth Service internally
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/business-names';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/business-names';
         $businessNamesMap = [];
 
         try {
@@ -493,7 +493,7 @@ class SuperAdminController extends Controller
         }
 
         // Call the Auth Service internally to create the sub businesses and update parent user role
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/superadmin/sub-business-store';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/superadmin/sub-business-store';
 
         try {
             $httpRequest = Http::withHeaders([
@@ -572,7 +572,7 @@ class SuperAdminController extends Controller
         }
 
         // Call the Auth Service internally to retrieve the sub-businesses
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/superadmin/get-sub-businesses';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/superadmin/get-sub-businesses';
 
         try {
             $response = Http::withHeaders([
@@ -611,7 +611,7 @@ class SuperAdminController extends Controller
     public function getEnterpriseUsersWithSubBusinesses(Request $request)
     {
         // Call the Auth Service internally to retrieve all enterprise users with their sub-businesses
-        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://localhost:8000') . '/api/internal/superadmin/get-enterprise-users';
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/superadmin/get-enterprise-users';
 
         try {
             $response = Http::withHeaders([

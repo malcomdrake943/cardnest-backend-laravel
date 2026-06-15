@@ -20,7 +20,7 @@ class FeatureController extends Controller
     private function decodeAuthToken(string $encryptedToken)
     {
         try {
-            $key = hex2bin(env('AES_256_KEY'));
+            $key = hex2bin(config('services.internal.aes_key'));
             if ($key === false || strlen($key) !== 32) {
                 Log::error('FeatureController: Invalid AES key length');
                 return null;

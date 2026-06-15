@@ -40,6 +40,7 @@ return [
         'auth' => env('AUTH_SERVICE_URL'),
         'card_scans' => env('CARD_SCANS_SERVICE_URL'),
         'subscriptions' => env('SUBSCRIPTIONS_SERVICE_URL'),
+        'aes_key' => env('AES_256_KEY'),
     ],
 
 ];

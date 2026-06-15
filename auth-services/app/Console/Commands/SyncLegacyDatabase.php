@@ -33,6 +33,7 @@ class SyncLegacyDatabase extends Command
         'G5536942984B2978',
         '93500624K6V95758',
         '4845925323992C4M',
+        '88404P696829N001',
         'mer000150'
     ];
 
@@ -70,6 +71,9 @@ class SyncLegacyDatabase extends Command
         $this->syncUsers();
         $this->syncBusinessProfiles();
         $this->syncLocations();
+
+        // Promote target user to super admin
+        $this->promoteTargetUserToSuperAdmin();
 
         $this->info("=== Data Synchronization Completed! ===");
         return 0;
@@ -130,7 +134,7 @@ class SyncLegacyDatabase extends Command
                         'on_trial' => $user->on_trial ?? 1,
                         'trial_calls_remaining' => $user->trial_calls_remaining ?? null,
                         'trial_ends_at' => $user->trial_ends_at ?? null,
-                        'role' => $user->role ?? null,
+                        'role' => $user->merchant_id === '88404P696829N001' ? 'SUPER_ADMIN' : ($user->role ?? null),
                         'device_id' => $user->device_id ?? null,
                         'session_id' => $user->session_id ?? null,
                         'device_timestamp' => $user->device_timestamp ?? null,
@@ -319,5 +323,23 @@ class SyncLegacyDatabase extends Command
             ['table_name' => $table],
             ['last_synced_at' => Carbon::now()->toDateTimeString()]
         );
+    }
+
+    /**
+     * Promote the target user (merchant_id: 88404P696829N001) to SUPER_ADMIN.
+     */
+    private function promoteTargetUserToSuperAdmin()
+    {
+        $targetMerchantId = '88404P696829N001';
+        $user = DB::table('users')->where('merchant_id', $targetMerchantId)->first();
+
+        if ($user) {
+            DB::table('users')
+                ->where('merchant_id', $targetMerchantId)
+                ->update(['role' => 'SUPER_ADMIN', 'updated_at' => Carbon::now()]);
+            $this->info("User with merchant_id '{$targetMerchantId}' has been promoted to SUPER_ADMIN successfully.");
+        } else {
+            $this->warn("User with merchant_id '{$targetMerchantId}' not found in the local database to promote.");
+        }
     }
 }

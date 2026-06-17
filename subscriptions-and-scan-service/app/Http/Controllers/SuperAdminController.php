@@ -374,7 +374,7 @@ class SuperAdminController extends Controller
         // Get the days query parameter (defaulting to 7 if not provided)
         $days = $request->query('days', 7);
 
-        // Fetch scans belonging to the merchant and join scan_sessions to retrieve the session's encryption key
+        // Base query
         $query = Scan::select(
             'scans.id',
             'scans.user_id',
@@ -395,25 +395,62 @@ class SuperAdminController extends Controller
             ->where('scans.merchant_id', $merchantId);
 
         // Filter by created_at if days is specified as a valid numeric string, except if 'all' is passed
+        $filteredByDate = false;
         if ($days !== 'all' && is_numeric($days) && $days > 0) {
             $query->where('scans.created_at', '>=', now()->subDays((int)$days));
+            $filteredByDate = true;
         }
 
         $scans = $query->latest('scans.created_at')->get();
+        $isFallback = false;
+
+        // Fallback: if we filtered by date and got 0 scans, fetch the latest 10 scans overall
+        if ($scans->isEmpty() && $filteredByDate) {
+            $scans = Scan::select(
+                'scans.id',
+                'scans.user_id',
+                'scans.merchant_id',
+                'scans.merchant_key',
+                'scans.card_number_masked',
+                'scans.status',
+                'scans.encrypted_data',
+                'scans.scan_id',
+                'scans.session_id',
+                'scans.failure_reason',
+                'scans.failure_stage',
+                'scans.created_at',
+                'scans.updated_at',
+                'scan_sessions.encryption_key'
+            )
+                ->leftJoin('scan_sessions', 'scans.scan_id', '=', 'scan_sessions.scan_id')
+                ->where('scans.merchant_id', $merchantId)
+                ->latest('scans.created_at')
+                ->take(10)
+                ->get();
+
+            if ($scans->isNotEmpty()) {
+                $isFallback = true;
+            }
+        }
 
         // Calculate aggregates
         $successCount = $scans->where('status', 'success')->count();
         $failureCount = $scans->where('status', 'failed')->count();
         $totalScans = $successCount + $failureCount;
 
+        $responseMessage = $isFallback 
+            ? "No scans in the last {$days} days. Showing the most recent scans."
+            : 'Merchant card scans retrieved successfully';
+
         return response()->json([
             'status' => true,
-            'message' => 'Merchant card scans retrieved successfully',
+            'message' => $responseMessage,
             'data' => [
                 'scans' => $scans,
                 'total_scans' => $totalScans,
                 'total_success' => $successCount,
-                'total_failure' => $failureCount
+                'total_failure' => $failureCount,
+                'is_fallback' => $isFallback
             ]
         ], 200);
     }

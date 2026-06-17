@@ -45,8 +45,8 @@ class ScanController extends Controller
                 'X-Internal-Service-Token' => config('services.internal.token'),
                 'Accept' => 'application/json',
             ])->get($authServiceUrl, [
-                        'merchant_id' => $request->merchantId
-                    ]);
+                'merchant_id' => $request->merchantId
+            ]);
 
             if ($authResponse->failed()) {
                 return response()->json(['message' => 'Invalid merchant credentials or Auth Service error'], 404);
@@ -54,7 +54,6 @@ class ScanController extends Controller
 
             $merchantData = $authResponse->json()['data'];
             $profile = $merchantData['business_profile'] ?? null;
-
         } catch (\Exception $e) {
             return response()->json(['message' => 'Auth Service communication error'], 500);
         }
@@ -219,7 +218,6 @@ class ScanController extends Controller
             return response()->json([
                 'authToken' => $encryptedToken
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to secure scan token',
@@ -259,11 +257,10 @@ class ScanController extends Controller
                 'X-Internal-Service-Token' => config('services.internal.token'),
                 'Accept' => 'application/json',
             ])->post($authServiceUrl, [
-                        'merchant_id' => $session->merchant_id,
-                        'scan_id' => $session->scan_id,
-                        'device_type' => $session->device_type
-                    ]);
-
+                'merchant_id' => $session->merchant_id,
+                'scan_id' => $session->scan_id,
+                'device_type' => $session->device_type
+            ]);
         } catch (\Exception $e) {
             // Log it but allow the response to succeed
             \Illuminate\Support\Facades\Log::error("Auth Service Scan Sync Failed: " . $e->getMessage());
@@ -346,7 +343,6 @@ class ScanController extends Controller
                 'success' => true,
                 'authToken' => $decryptedToken
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -410,6 +406,17 @@ class ScanController extends Controller
             if ($request->status == 'failed') {
                 // Track subscription usage
                 $limit = $subscription->api_call_limit; // Singular column name
+                $subscription->api_calls_used += 1;
+
+                if ($subscription->api_calls_used > $limit) {
+                    $subscription->overage_calls += 1;
+                    $warning = 'Subscription API limit reached. Overage charges may apply.';
+                }
+
+                $subscription->save();
+                $message = 'Card scan saved and subscription usage updated.';
+            } else if ($request->status == "success") {
+                $limit = $subscription->api_call_limit;
                 $subscription->api_calls_used += 1;
 
                 if ($subscription->api_calls_used > $limit) {
@@ -513,7 +520,7 @@ class ScanController extends Controller
                 }
             }
 
-            $responseMessage = $isFallback 
+            $responseMessage = $isFallback
                 ? "No scans in the last {$days} days. Showing the most recent scans."
                 : 'Retrieve Card Scans record against merchant_id.';
 
@@ -530,8 +537,5 @@ class ScanController extends Controller
                 'data' => NULL
             ], 400);
         }
-
     }
-
-
 }

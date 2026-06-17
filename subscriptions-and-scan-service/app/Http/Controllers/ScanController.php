@@ -393,40 +393,33 @@ class ScanController extends Controller
             ->latest()
             ->first();
 
-        if (!$subscription) {
+        $status = $request->status;
+
+        $hasActiveSubscription = $subscription && 
+            $subscription->status === 'active' && 
+            now()->lte(\Carbon\Carbon::parse($subscription->renewal_date));
+
+        if (!$hasActiveSubscription) {
             $warning = 'No active subscription found. Please subscribe to continue without interruptions.';
         } else {
             // Check billing overdue > 30 days
             $billing = BillingLog::where('merchant_id', $request->merchant_id)->latest()->first();
 
-            if ($billing && !$billing->is_paid && now()->gt($billing->due_date) && now()->diffInDays($billing->due_date, false) > 30) {
+            if ($billing && !$billing->is_paid && now()->gt($billing->due_date) && now()->diff($billing->due_date)->days > 30) {
                 $warning = 'Subscription blocked due to unpaid invoice. Please settle your payment to avoid service interruptions.';
             }
 
-            if ($request->status == 'failed') {
-                // Track subscription usage
-                $limit = $subscription->api_call_limit; // Singular column name
-                $subscription->api_calls_used += 1;
+            // Track subscription usage
+            $limit = $subscription->api_call_limit; // Singular column name
+            $subscription->api_calls_used += 1;
 
-                if ($subscription->api_calls_used > $limit) {
-                    $subscription->overage_calls += 1;
-                    $warning = 'Subscription API limit reached. Overage charges may apply.';
-                }
-
-                $subscription->save();
-                $message = 'Card scan saved and subscription usage updated.';
-            } else if ($request->status == "success") {
-                $limit = $subscription->api_call_limit;
-                $subscription->api_calls_used += 1;
-
-                if ($subscription->api_calls_used > $limit) {
-                    $subscription->overage_calls += 1;
-                    $warning = 'Subscription API limit reached. Overage charges may apply.';
-                }
-
-                $subscription->save();
-                $message = 'Card scan saved and subscription usage updated.';
+            if ($subscription->api_calls_used > $limit) {
+                $subscription->overage_calls += 1;
+                $warning = 'Subscription API limit reached. Overage charges may apply.';
             }
+
+            $subscription->save();
+            $message = 'Card scan saved and subscription usage updated.';
         }
 
         // Always create the card scan record regardless of subscription status
@@ -435,7 +428,7 @@ class ScanController extends Controller
             'merchant_id' => $request->merchant_id,
             'merchant_key' => $request->merchant_key,
             'card_number_masked' => $request->card_number_masked,
-            'status' => $request->status,
+            'status' => $status,
             'scan_id' => $request->scan_id,
             'failure_reason' => $request->failure_reason,
             'failure_stage' => $request->failure_stage,

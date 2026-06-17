@@ -409,12 +409,12 @@ class ScanController extends Controller
                 $warning = 'Subscription blocked due to unpaid invoice. Please settle your payment to avoid service interruptions.';
             }
 
-            // Track subscription usage
-            $limit = $subscription->api_call_limit; // Singular column name
-            $subscription->api_calls_used += 1;
+            // Track subscription usage safely casting nullable strings to int
+            $limit = (int) $subscription->api_call_limit; // Singular column name
+            $subscription->api_calls_used = ((int) $subscription->api_calls_used) + 1;
 
             if ($subscription->api_calls_used > $limit) {
-                $subscription->overage_calls += 1;
+                $subscription->overage_calls = ((int) $subscription->overage_calls) + 1;
                 $warning = 'Subscription API limit reached. Overage charges may apply.';
             }
 

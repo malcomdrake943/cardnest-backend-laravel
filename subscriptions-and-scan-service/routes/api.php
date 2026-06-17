@@ -20,6 +20,8 @@ Route::get('/Packages/Show/{id}', [PackageController::class, 'show']);
 
 Route::get('/feature/get', [FeatureController::class, 'getFeatures']);
 
+Route::post('/merchantscan/generateToken', [ScanController::class, 'generateToken']);
+
 //SUBSCRIPTION HANDLING ENDPOINTS
 Route::middleware(['verify.user'])->group(function () {
     //FEATURE ENDPOINTS
@@ -39,8 +41,8 @@ Route::middleware(['verify.user'])->group(function () {
     Route::post('/updateMerchantDisplayInfo', [MerchantController::class, 'updateMerchantDisplayInfo']);
     Route::get('/getDocumentation', [SuperAdminController::class, 'getDocumentation']);
 
+
     //SCAN ENDPOINTS 
-    Route::post('/merchantscan/generateToken', [ScanController::class, 'generateToken']);
     Route::post('/scan/token', [ScanController::class, 'createScanToken']);
     Route::post('/scan/submitEncryptedData', [ScanController::class, 'submitEncryptedData']);
     Route::post('/scan/getEncryptedData', [ScanController::class, 'getEncryptedData']);

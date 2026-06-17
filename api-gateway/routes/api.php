@@ -13,6 +13,7 @@ Route::any('feature/get', [GatewayController::class, 'proxyToSubscriptionsServic
 Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
 
 Route::get('getmerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
+Route::any('merchantscan/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
 
 // Protected routes (require JWT verification)
 Route::middleware(['auth.jwt'])->group(function () {
@@ -51,7 +52,7 @@ Route::middleware(['auth.jwt'])->group(function () {
     Route::any('Packages/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
     Route::any('merchant/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
     Route::any('scan/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
-    Route::any('merchantscan/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+
 
     // Admin-only Superadmin routes (restricted to SUPER_ADMIN role)
     Route::middleware(['admin'])->group(function () {

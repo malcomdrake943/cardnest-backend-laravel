@@ -60,35 +60,52 @@ class ScanController extends Controller
         }
 
         // Check Access and Determine Subscription Status
-        $hasValidAccess = false;
-        $subscriptionStatus = 'none'; // 'active', 'expired', 'none'
-        $subscriptionDetails = null;
-
-        // A. Check local subscription (if exists)
         $subscription = Subscription::where('merchant_id', $request->merchantId)
             ->latest()
             ->first();
 
-        if ($subscription) {
-            $hasValidAccess = true;
-            $isExpired = now()->gt(Carbon::parse($subscription->renewal_date));
-            $subscriptionStatus = $isExpired ? 'expired' : 'active';
-
-            $subscriptionDetails = [
-                'renewal_date' => $subscription->renewal_date,
-                'api_calls_used' => $subscription->api_calls_used,
-                'api_call_limit' => $subscription->api_call_limit,
-                'overage_calls' => $subscription->overage_calls,
-            ];
-        }
-
-        if (!$hasValidAccess) {
+        if (!$subscription) {
             return response()->json([
                 'status' => false,
                 'code' => 403,
-                'message' => 'No valid access available.'
+                'message' => 'No subscription found. Please subscribe to continue.'
             ], 403);
         }
+
+        $isExpired = now()->gt(Carbon::parse($subscription->renewal_date));
+        if ($isExpired) {
+            return response()->json([
+                'status' => false,
+                'code' => 403,
+                'message' => 'Your subscription has expired. Please renew to continue.'
+            ], 403);
+        }
+
+        if ($subscription->status !== 'active') {
+            return response()->json([
+                'status' => false,
+                'code' => 403,
+                'message' => 'Your subscription is not active. Please activate to continue.'
+            ], 403);
+        }
+
+        $limit = (int) $subscription->api_call_limit;
+        $used = (int) $subscription->api_calls_used;
+        if ($used >= $limit) {
+            return response()->json([
+                'status' => false,
+                'code' => 403,
+                'message' => 'Subscription API limit reached. Please upgrade your plan to continue.'
+            ], 403);
+        }
+
+        $subscriptionStatus = 'active';
+        $subscriptionDetails = [
+            'renewal_date' => $subscription->renewal_date,
+            'api_calls_used' => $subscription->api_calls_used,
+            'api_call_limit' => $subscription->api_call_limit,
+            'overage_calls' => $subscription->overage_calls,
+        ];
 
         // 4. Generate a new unique Scan ID
         do {

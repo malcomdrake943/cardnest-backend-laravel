@@ -14,6 +14,8 @@ Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
 
 Route::get('getmerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
 Route::any('merchantscan/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+Route::any('UpdateCardScan', [GatewayController::class, 'proxyToSubscriptionsService']);
+
 
 // Protected routes (require JWT verification)
 Route::middleware(['auth.jwt'])->group(function () {
@@ -27,7 +29,6 @@ Route::middleware(['auth.jwt'])->group(function () {
     Route::get('user/{merchantId}/details', [GatewayController::class, 'proxyToAuthService']);
     Route::get('location/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
 
-    Route::any('UpdateCardScan', [GatewayController::class, 'proxyToSubscriptionsService']);
     Route::any('getmerchantscanInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
     Route::any('getmerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
     Route::any('updateMerchantScanInfo', [GatewayController::class, 'proxyToSubscriptionsService']);

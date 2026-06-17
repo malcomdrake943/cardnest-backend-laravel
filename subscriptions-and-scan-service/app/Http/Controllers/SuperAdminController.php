@@ -320,7 +320,7 @@ class SuperAdminController extends Controller
 
         // Query scans from local scans table and group by merchant_id (only retrieves merchants who actually have scans)
         $scansAggregation = Scan::select('merchant_id')
-            ->selectRaw('COUNT(*) as total_scans')
+            ->selectRaw('COUNT(CASE WHEN status = "success" OR status = "failed" THEN 1 END) as total_scans')
             ->selectRaw("SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_scans")
             ->groupBy('merchant_id')
             ->get();
@@ -371,8 +371,11 @@ class SuperAdminController extends Controller
             ], 400);
         }
 
+        // Get the days query parameter (defaulting to 7 if not provided)
+        $days = $request->query('days', 7);
+
         // Fetch scans belonging to the merchant and join scan_sessions to retrieve the session's encryption key
-        $scans = Scan::select(
+        $query = Scan::select(
             'scans.id',
             'scans.user_id',
             'scans.merchant_id',
@@ -389,14 +392,19 @@ class SuperAdminController extends Controller
             'scan_sessions.encryption_key'
         )
             ->leftJoin('scan_sessions', 'scans.scan_id', '=', 'scan_sessions.scan_id')
-            ->where('scans.merchant_id', $merchantId)
-            ->latest('scans.created_at')
-            ->get();
+            ->where('scans.merchant_id', $merchantId);
+
+        // Filter by created_at if days is specified as a valid numeric string, except if 'all' is passed
+        if ($days !== 'all' && is_numeric($days) && $days > 0) {
+            $query->where('scans.created_at', '>=', now()->subDays((int)$days));
+        }
+
+        $scans = $query->latest('scans.created_at')->get();
 
         // Calculate aggregates
-        $totalScans = $scans->count();
         $successCount = $scans->where('status', 'success')->count();
         $failureCount = $scans->where('status', 'failed')->count();
+        $totalScans = $successCount + $failureCount;
 
         return response()->json([
             'status' => true,

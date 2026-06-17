@@ -7,6 +7,7 @@ use App\Models\Package;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
 
 
 class SubscriptionController extends Controller
@@ -86,14 +87,23 @@ class SubscriptionController extends Controller
     {
         // the user is verified by the middleware
         $authUser = $request->auth_user;
-        $merchantId = $authUser['merchant_id'] ?? $request->merchant_id;
-        $userId = $authUser['id'] ?? null;
+        $userRole = $request->header('X-User-Role') ?? ($authUser['role'] ?? null);
+
+        // Ensure this is accessed only by a Super Admin
+        if ($userRole !== 'SUPER_ADMIN') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized. Only super admins can configure renewals.'
+            ], 403);
+        }
 
         $validator = Validator::make($request->all(), [
             'merchant_id' => 'required|string',
             'is_new_user' => 'nullable|boolean',
             'custom_api_count' => 'nullable|integer|min:0',
             'date' => 'nullable|date',
+            'user_id' => 'nullable|string',
+            'package_id' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -104,10 +114,31 @@ class SubscriptionController extends Controller
             ], 422);
         }
 
+        $merchantId = $request->merchant_id;
+
         // 1. Find the current most recent subscription
         $currentSubscription = Subscription::where('merchant_id', $merchantId)
             ->latest()
             ->first();
+
+        // Determine user_id: request input, or existing subscription's user_id, or look up from auth service
+        $userId = $request->user_id ?? ($currentSubscription->user_id ?? null);
+        if (!$userId) {
+            try {
+                $authResponse = Http::withHeaders([
+                    'X-Internal-Service-Token' => config('services.internal.token'),
+                    'Accept' => 'application/json',
+                ])->get(config('services.internal.auth') . '/api/internal/verify-user', [
+                    'id' => $merchantId,
+                    'merchant_id' => $merchantId,
+                ]);
+                if ($authResponse->successful()) {
+                    $userId = $authResponse->json('data.id');
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to fetch merchant user ID: " . $e->getMessage());
+            }
+        }
 
         $now = now();
         $isNewUser = !$currentSubscription || filter_var($request->is_new_user, FILTER_VALIDATE_BOOLEAN);
@@ -173,6 +204,10 @@ class SubscriptionController extends Controller
             if (!empty($request->custom_api_count)) {
                 $subscription->api_call_limit = $request->custom_api_count;
             }
+            if ($userId) {
+                $subscription->user_id = $userId;
+            }
+            $subscription->status = 'active';
             $subscription->save();
         }
 

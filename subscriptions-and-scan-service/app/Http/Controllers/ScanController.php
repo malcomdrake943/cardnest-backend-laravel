@@ -441,7 +441,7 @@ class ScanController extends Controller
      * @param  \Illuminate\Http\Request  $request  { id: string }
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getCardScans(Request $request, $id = null)
+    public function getCardScans(Request $request)
     {
         $authUser = $request->auth_user;
         $userRole = $request->header('X-User-Role') ?? ($authUser['role'] ?? null);
@@ -449,9 +449,9 @@ class ScanController extends Controller
 
         // Determine merchant_id to query based on user role and request inputs
         if ($isSuperAdmin) {
-            $merchantId = $id ?? $request->input('merchant_id') ?? $request->input('merchantId') ?? $request->input('id') ?? ($authUser['merchant_id'] ?? null);
+            $merchantId = $request->input('merchant_id') ?? $request->input('merchantId') ?? $request->input('id') ?? ($authUser['merchant_id'] ?? null);
         } else {
-            $merchantId = $authUser['merchant_id'] ?? $id ?? $request->input('merchant_id') ?? $request->input('merchantId');
+            $merchantId = $authUser['merchant_id'] ?? $request->input('merchant_id') ?? $request->input('merchantId');
         }
 
         if (!$merchantId) {
@@ -468,14 +468,43 @@ class ScanController extends Controller
             ->first();
 
         if ($subscription) {
-            $scan = Scan::where('merchant_id', $merchantId)
-                ->latest()
-                ->get();
+            // Get the days query parameter (defaulting to 7 if not provided)
+            $days = $request->query('days', 7);
+
+            // Base query
+            $query = Scan::where('merchant_id', $merchantId);
+
+            // Filter by created_at if days is specified as a valid numeric string, except if 'all' is passed
+            $filteredByDate = false;
+            if ($days !== 'all' && is_numeric($days) && $days > 0) {
+                $query->where('created_at', '>=', now()->subDays((int)$days));
+                $filteredByDate = true;
+            }
+
+            $scan = $query->latest()->get();
+            $isFallback = false;
+
+            // Fallback: if we filtered by date and got 0 scans, fetch the latest 10 scans overall
+            if ($scan->isEmpty() && $filteredByDate) {
+                $scan = Scan::where('merchant_id', $merchantId)
+                    ->latest()
+                    ->take(10)
+                    ->get();
+
+                if ($scan->isNotEmpty()) {
+                    $isFallback = true;
+                }
+            }
+
+            $responseMessage = $isFallback 
+                ? "No scans in the last {$days} days. Showing the most recent scans."
+                : 'Retrieve Card Scans record against merchant_id.';
 
             return response()->json([
                 'status' => true,
-                'message' => 'Retrieve Card Scans record against merchant_id.',
-                'data' => $scan
+                'message' => $responseMessage,
+                'data' => $scan,
+                'is_fallback' => $isFallback
             ], 200);
         } else {
             return response()->json([

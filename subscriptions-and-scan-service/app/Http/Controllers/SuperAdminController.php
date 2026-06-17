@@ -318,50 +318,27 @@ class SuperAdminController extends Controller
             \Illuminate\Support\Facades\Log::error("Failed to fetch business names: " . $e->getMessage());
         }
 
-        // Query scans from local scans table and group by merchant_id
+        // Query scans from local scans table and group by merchant_id (only retrieves merchants who actually have scans)
         $scansAggregation = Scan::select('merchant_id')
             ->selectRaw('COUNT(*) as total_scans')
             ->selectRaw("SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_scans")
             ->groupBy('merchant_id')
             ->get();
 
-        // Map scans data
-        $scanStats = [];
-        foreach ($scansAggregation as $agg) {
-            $scanStats[$agg->merchant_id] = [
-                'total_scans' => (int) $agg->total_scans,
-                'success_scans' => (int) $agg->success_scans,
-            ];
-        }
-
         $merchantsData = [];
 
-        // Loop through all merchants retrieved from Auth Service to include those with 0 scans
-        foreach ($businessNamesMap as $merchantId => $businessName) {
-            $stats = $scanStats[$merchantId] ?? ['total_scans' => 0, 'success_scans' => 0];
-            $totalScans = $stats['total_scans'];
-            $successScans = $stats['success_scans'];
-            $successRate = $totalScans > 0 ? round(($successScans / $totalScans) * 100, 2) . '%' : '0%';
+        // Loop through only the merchants that have scan records
+        foreach ($scansAggregation as $agg) {
+            $merchantId = $agg->merchant_id;
+            $totalScans = (int) $agg->total_scans;
+            $successScans = (int) $agg->success_scans;
+            $successRate = $totalScans > 0 ? round(($successScans / $totalScans) * 100, 2) . '%' : '100%';
+
+            $businessName = $businessNamesMap[$merchantId] ?? 'Merchant (' . $merchantId . ')';
 
             $merchantsData[] = [
                 'merchant_id' => $merchantId,
                 'business_name' => $businessName,
-                'total_scans' => $totalScans,
-                'success_rate' => $successRate,
-            ];
-
-            unset($scanStats[$merchantId]);
-        }
-
-        // Add any remaining merchants found in scans that weren't in businessNamesMap
-        foreach ($scanStats as $merchantId => $stats) {
-            $totalScans = $stats['total_scans'];
-            $successScans = $stats['success_scans'];
-            $successRate = $totalScans > 0 ? round(($successScans / $totalScans) * 100, 2) . '%' : '0%';
-
-            $merchantsData[] = [
-                'merchant_id' => $merchantId,
-                'business_name' => 'Merchant (' . $merchantId . ')',
                 'total_scans' => $totalScans,
                 'success_rate' => $successRate,
             ];
@@ -435,7 +412,7 @@ class SuperAdminController extends Controller
 
     public function accessAllOldSubscriptions(Request $request)
     {
-        // Get current subscriptions
+        // Get all subscriptions
         $allSubscriptions = Subscription::with('package')->select(
             'id',
             'user_id',
@@ -452,13 +429,48 @@ class SuperAdminController extends Controller
             'updated_at'
         )->orderby('created_at', 'desc')->get();
 
+        // Fetch all business profiles/names from Auth Service internally
+        $authServiceUrl = config('services.internal.auth', 'http://localhost:8001') . '/api/internal/business-names';
+        $businessNamesMap = [];
+
+        try {
+            $response = Http::withHeaders([
+                'X-Internal-Service-Token' => config('services.internal.token'),
+                'Accept' => 'application/json',
+            ])->get($authServiceUrl);
+
+            if ($response->successful()) {
+                $merchantsList = $response->json()['data'] ?? [];
+                foreach ($merchantsList as $m) {
+                    if (isset($m['merchant_id'])) {
+                        $businessNamesMap[$m['merchant_id']] = $m['business_name'];
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to fetch business names: " . $e->getMessage());
+        }
+
+        // Group subscriptions by merchant_id and format with business name
+        $grouped = $allSubscriptions->groupBy('merchant_id');
+        $groupedData = [];
+
+        foreach ($grouped as $merchantId => $subscriptions) {
+            $businessName = $businessNamesMap[$merchantId] ?? 'Merchant (' . $merchantId . ')';
+            $groupedData[] = [
+                'merchant_id' => $merchantId,
+                'business_name' => $businessName,
+                'subscriptions' => $subscriptions
+            ];
+        }
+
         $oldSubscriptionsCount = $allSubscriptions->where('status', '!=', 'active')->count();
         $currentSubscriptionsCount = $allSubscriptions->where('status', 'active')->count();
 
         return response()->json([
             'status' => true,
             'message' => 'All subscription records retrieved successfully',
-            'data' => $allSubscriptions,
+            'data' => $groupedData,
             'metadata' => [
                 'old_subscriptions_count' => $oldSubscriptionsCount,
                 'current_subscriptions_count' => $currentSubscriptionsCount,

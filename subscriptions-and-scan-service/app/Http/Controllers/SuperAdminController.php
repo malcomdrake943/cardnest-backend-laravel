@@ -67,7 +67,6 @@ class SuperAdminController extends Controller
             }
 
             return response()->json($response->json(), $response->status());
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -105,8 +104,8 @@ class SuperAdminController extends Controller
                 'X-Internal-Service-Token' => config('services.internal.token'),
                 'Accept' => 'application/json',
             ])->get($authServiceUrl, [
-                        'merchant_id' => $request->merchant_id
-                    ]);
+                'merchant_id' => $request->merchant_id
+            ]);
 
             if ($response->failed()) {
                 $errorResponse = $response->json();
@@ -118,7 +117,6 @@ class SuperAdminController extends Controller
             }
 
             return response()->json($response->json(), $response->status());
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -180,7 +178,6 @@ class SuperAdminController extends Controller
                 'message' => 'Documentation uploaded successfully.',
                 'data' => $doc
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -268,10 +265,10 @@ class SuperAdminController extends Controller
                 'X-Internal-Service-Token' => config('services.internal.token'),
                 'Accept' => 'application/json',
             ])->post($authServiceUrl, [
-                        'admin_email' => $request->admin_email,
-                        'user_email' => $request->user_email,
-                        'role' => $request->role,
-                    ]);
+                'admin_email' => $request->admin_email,
+                'user_email' => $request->user_email,
+                'role' => $request->role,
+            ]);
 
             if ($response->failed()) {
                 $errorResponse = $response->json();
@@ -283,7 +280,6 @@ class SuperAdminController extends Controller
             }
 
             return response()->json($response->json(), $response->status());
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -454,7 +450,7 @@ class SuperAdminController extends Controller
             'renewal_date',
             'created_at',
             'updated_at'
-        )->get();
+        )->orderby('created_at', 'desc')->get();
 
         $oldSubscriptionsCount = $allSubscriptions->where('status', '!=', 'active')->count();
         $currentSubscriptionsCount = $allSubscriptions->where('status', 'active')->count();
@@ -566,7 +562,6 @@ class SuperAdminController extends Controller
             }
 
             return response()->json($response->json(), $response->status());
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -604,8 +599,8 @@ class SuperAdminController extends Controller
                 'X-Internal-Service-Token' => config('services.internal.token'),
                 'Accept' => 'application/json',
             ])->get($authServiceUrl, [
-                        'parent_id' => $request->parent_id
-                    ]);
+                'parent_id' => $request->parent_id
+            ]);
 
             if ($response->failed()) {
                 $errorResponse = $response->json();
@@ -617,7 +612,6 @@ class SuperAdminController extends Controller
             }
 
             return response()->json($response->json(), $response->status());
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -654,7 +648,6 @@ class SuperAdminController extends Controller
             }
 
             return response()->json($response->json(), $response->status());
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,

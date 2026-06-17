@@ -396,7 +396,7 @@ class SuperAdminController extends Controller
         // Calculate aggregates
         $totalScans = $scans->count();
         $successCount = $scans->where('status', 'success')->count();
-        $failureCount = $scans->where('status', 'failure')->count();
+        $failureCount = $scans->where('status', 'failed')->count();
 
         return response()->json([
             'status' => true,

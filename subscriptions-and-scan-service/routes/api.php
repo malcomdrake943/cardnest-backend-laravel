@@ -24,6 +24,7 @@ Route::post('/merchantscan/generateToken', [ScanController::class, 'generateToke
 Route::post('/UpdateCardScan', [ScanController::class, 'UpdateCardScan']);
 Route::post('/scan/submitEncryptedData', [ScanController::class, 'submitEncryptedData']);
 Route::post('/scan/token', [ScanController::class, 'createScanToken']);
+Route::get('/getmerchantscanInfo', [MerchantController::class, 'getmerchantscanInfo']);
 
 
 //SUBSCRIPTION HANDLING ENDPOINTS
@@ -39,7 +40,6 @@ Route::middleware(['verify.user'])->group(function () {
     Route::get('/merchant/getOldSubscriptions', [SubscriptionController::class, 'getOldSubscriptions']);
 
     // MERCHANT ENDPOINTS 
-    Route::get('/getmerchantscanInfo', [MerchantController::class, 'getmerchantscanInfo']);
     Route::get('/getmerchantDisplayInfo', [MerchantController::class, 'getmerchantDisplayInfo']);
     Route::post('/updateMerchantScanInfo', [MerchantController::class, 'updateMerchantScanInfo']);
     Route::post('/updateMerchantDisplayInfo', [MerchantController::class, 'updateMerchantDisplayInfo']);

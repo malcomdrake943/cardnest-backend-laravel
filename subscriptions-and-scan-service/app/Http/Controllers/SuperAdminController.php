@@ -320,7 +320,7 @@ class SuperAdminController extends Controller
 
         // Query scans from local scans table and group by merchant_id (only retrieves merchants who actually have scans)
         $scansAggregation = Scan::select('merchant_id')
-            ->selectRaw('COUNT(CASE WHEN status = "success" OR status = "failed" THEN 1 END) as total_scans')
+            ->selectRaw('COUNT(*) as total_scans')
             ->selectRaw("SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_scans")
             ->groupBy('merchant_id')
             ->get();
@@ -438,7 +438,7 @@ class SuperAdminController extends Controller
         $failureCount = $scans->where('status', 'failed')->count();
         $totalScans = $successCount + $failureCount;
 
-        $responseMessage = $isFallback 
+        $responseMessage = $isFallback
             ? "No scans in the last {$days} days. Showing the most recent scans."
             : 'Merchant card scans retrieved successfully';
 

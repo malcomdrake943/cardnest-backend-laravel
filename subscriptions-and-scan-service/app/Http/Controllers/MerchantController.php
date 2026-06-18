@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use App\Models\ScanSession;
 
 class MerchantController extends Controller
@@ -60,12 +61,14 @@ class MerchantController extends Controller
             $merchantData = $response->json()['data'];
             $profile = $merchantData['business_profile'] ?? null;
 
-            // Format the logo URL (Assuming the logo path is stored relatively)
+            // Format the logo URL
             $logoUrl = null;
-            if ($profile && isset($profile['display_logo'])) {
-                // Since this is a microservice, the asset URL should point to the Auth Service's storage or a shared CDN
-                $authBaseUrl = config('services.internal.auth', 'http://localhost:8001');
-                $logoUrl = $authBaseUrl . '/storage/' . $profile['display_logo'];
+            if ($profile && !empty($profile['display_logo'])) {
+                if (filter_var($profile['display_logo'], FILTER_VALIDATE_URL)) {
+                    $logoUrl = $profile['display_logo'];
+                } else {
+                    $logoUrl = Storage::disk('s3')->url($profile['display_logo']);
+                }
             }
 
             return response()->json([
@@ -131,9 +134,12 @@ class MerchantController extends Controller
 
             // Format the logo URL
             $logoUrl = null;
-            if ($profile && isset($profile['display_logo'])) {
-                $authBaseUrl = config('services.internal.auth', 'http://localhost:8001');
-                $logoUrl = $authBaseUrl . '/storage/' . $profile['display_logo'];
+            if ($profile && !empty($profile['display_logo'])) {
+                if (filter_var($profile['display_logo'], FILTER_VALIDATE_URL)) {
+                    $logoUrl = $profile['display_logo'];
+                } else {
+                    $logoUrl = Storage::disk('s3')->url($profile['display_logo']);
+                }
             }
 
             return response()->json([

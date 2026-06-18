@@ -321,6 +321,7 @@ class SuperAdminController extends Controller
         // Query scans from local scans table and group by merchant_id (only retrieves merchants who actually have scans)
         $scansAggregation = Scan::select('merchant_id')
             ->selectRaw('COUNT(*) as total_scans')
+            ->selectRaw('COUNT(CASE WHEN status = "success" OR status = "failed" THEN 1 END) as processed_scans')
             ->selectRaw("SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_scans")
             ->groupBy('merchant_id')
             ->get();
@@ -332,7 +333,8 @@ class SuperAdminController extends Controller
             $merchantId = $agg->merchant_id;
             $totalScans = (int) $agg->total_scans;
             $successScans = (int) $agg->success_scans;
-            $successRate = $totalScans > 0 ? round(($successScans / $totalScans) * 100, 2) . '%' : '100%';
+            $processedScans = (int) $agg->processed_scans;
+            $successRate = $processedScans > 0 ? round(($successScans / $processedScans) * 100, 2) . '%' : '100%';
 
             $businessName = $businessNamesMap[$merchantId] ?? 'Merchant (' . $merchantId . ')';
 

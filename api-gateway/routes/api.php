@@ -15,6 +15,8 @@ Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
 Route::get('getmerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
 Route::any('merchantscan/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
 Route::any('UpdateCardScan', [GatewayController::class, 'proxyToSubscriptionsService']);
+Route::post('scan/token', [GatewayController::class, 'proxyToSubscriptionsService']);
+Route::post('scan/submitEncryptedData', [GatewayController::class, 'proxyToSubscriptionsService']);
 
 
 // Protected routes (require JWT verification)

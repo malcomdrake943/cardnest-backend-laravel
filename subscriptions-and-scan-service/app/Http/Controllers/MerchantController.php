@@ -201,10 +201,15 @@ class MerchantController extends Controller
                 );
             }
 
-            $response = $httpRequest->post($authServiceUrl, [
+            $payload = [
                 'merchant_id' => $request->merchant_id,
-                'display_name' => $request->display_name,
-            ]);
+            ];
+
+            if ($request->has('display_name')) {
+                $payload['display_name'] = $request->display_name;
+            }
+
+            $response = $httpRequest->post($authServiceUrl, $payload);
 
             if ($response->failed()) {
                 return response()->json([
@@ -215,7 +220,33 @@ class MerchantController extends Controller
                 ], $response->status());
             }
 
-            return response()->json($response->json());
+            $responseData = $response->json();
+            if (isset($responseData['data']['display_logo'])) {
+                $logo = $responseData['data']['display_logo'];
+                if (!empty($logo)) {
+                    if (filter_var($logo, FILTER_VALIDATE_URL)) {
+                        $parsedUrl = parse_url($logo);
+                        $path = $parsedUrl['path'] ?? '';
+                        if (str_contains($path, '/storage/')) {
+                            $parts = explode('/storage/', $path);
+                            $logo = end($parts);
+                        } elseif (str_contains($logo, 'localhost') || str_contains($logo, '127.0.0.1')) {
+                            $parts = explode('/businesslogo/', $logo);
+                            if (count($parts) > 1) {
+                                $logo = 'businesslogo/' . end($parts);
+                            }
+                        }
+                    }
+
+                    if (!filter_var($logo, FILTER_VALIDATE_URL)) {
+                        $responseData['data']['display_logo'] = Storage::disk('s3')->url($logo);
+                    } else {
+                        $responseData['data']['display_logo'] = $logo;
+                    }
+                }
+            }
+
+            return response()->json($responseData);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -287,7 +318,33 @@ class MerchantController extends Controller
                 ], $response->status());
             }
 
-            return response()->json($response->json());
+            $responseData = $response->json();
+            if (isset($responseData['data']['display_logo'])) {
+                $logo = $responseData['data']['display_logo'];
+                if (!empty($logo)) {
+                    if (filter_var($logo, FILTER_VALIDATE_URL)) {
+                        $parsedUrl = parse_url($logo);
+                        $path = $parsedUrl['path'] ?? '';
+                        if (str_contains($path, '/storage/')) {
+                            $parts = explode('/storage/', $path);
+                            $logo = end($parts);
+                        } elseif (str_contains($logo, 'localhost') || str_contains($logo, '127.0.0.1')) {
+                            $parts = explode('/businesslogo/', $logo);
+                            if (count($parts) > 1) {
+                                $logo = 'businesslogo/' . end($parts);
+                            }
+                        }
+                    }
+
+                    if (!filter_var($logo, FILTER_VALIDATE_URL)) {
+                        $responseData['data']['display_logo'] = Storage::disk('s3')->url($logo);
+                    } else {
+                        $responseData['data']['display_logo'] = $logo;
+                    }
+                }
+            }
+
+            return response()->json($responseData);
 
         } catch (\Exception $e) {
             return response()->json([

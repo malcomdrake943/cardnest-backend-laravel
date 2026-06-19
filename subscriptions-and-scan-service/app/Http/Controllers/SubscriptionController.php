@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 
 
 class SubscriptionController extends Controller
@@ -116,7 +117,7 @@ class SubscriptionController extends Controller
 
         $merchantId = $request->merchant_id;
 
-        // 1. Find the current most recent subscription
+        // 1. Find the current most recent subscription (non-blocking query first to resolve user_id)
         $currentSubscription = Subscription::where('merchant_id', $merchantId)
             ->latest()
             ->first();
@@ -141,79 +142,113 @@ class SubscriptionController extends Controller
         }
 
         $now = now();
-        $isNewUser = !$currentSubscription || filter_var($request->is_new_user, FILTER_VALIDATE_BOOLEAN);
-        $isExpired = $currentSubscription && $currentSubscription->renewal_date && Carbon::parse($currentSubscription->renewal_date)->isPast();
+        $isExpiredResult = false;
 
-        // 2. Decide if we need a NEW record (for renewal or new user)
-        if ($isNewUser || $isExpired) {
-            $startDate = ($isNewUser && $request->date) ? Carbon::parse($request->date) : $now;
+        // Perform the state checks and modifications inside a database transaction with write locks
+        $subscription = DB::transaction(function () use ($request, $merchantId, $userId, $now, &$isExpiredResult) {
+            $activeSubscriptions = Subscription::where('merchant_id', $merchantId)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->get();
 
-            // Handle null currentSubscription for new users
-            $baseLimit = $request->custom_api_count ?? ($currentSubscription->api_call_limit ?? 1000);
+            // Refresh the current subscription inside the lock
+            $currentSubscription = Subscription::where('merchant_id', $merchantId)
+                ->latest()
+                ->first();
 
-            if ($isExpired) {
-                // Mark the old one as expired before creating the new one
-                $currentSubscription->status = 'expired';
-                $currentSubscription->save();
+            $isNewUser = !$currentSubscription || filter_var($request->is_new_user, FILTER_VALIDATE_BOOLEAN);
+            $isExpired = $currentSubscription && $currentSubscription->renewal_date && Carbon::parse($currentSubscription->renewal_date)->isPast();
+            $isExpiredResult = $isExpired;
 
-                // Calculate renewal adjustment from the OLD record
-                $oldLimit = $currentSubscription->api_call_limit ?? 0;
-                $oldUsed = $currentSubscription->api_calls_used ?? 0;
+            // 2. Decide if we need a NEW record (for renewal or new user)
+            if ($isNewUser || $isExpired) {
+                // If this is a renewal (not a new user) but a newer active subscription has already been created
+                // (e.g., by a concurrent/parallel request), we clean up any duplicates and return the existing active one.
+                if (!$isNewUser && $currentSubscription && $currentSubscription->status === 'active' && Carbon::parse($currentSubscription->renewal_date)->isFuture()) {
+                    foreach ($activeSubscriptions as $sub) {
+                        if ($sub->id !== $currentSubscription->id) {
+                            $sub->status = 'expired';
+                            $sub->save();
+                        }
+                    }
+                    $isExpiredResult = false; // It was already renewed by another thread, so count it as updated in place
+                    return $currentSubscription;
+                }
 
-                $pending = max(0, $oldLimit - $oldUsed);
-                $overage = max(0, $oldUsed - $oldLimit);
+                $startDate = ($isNewUser && $request->date) ? Carbon::parse($request->date) : $now;
 
-                $baseLimit = $request->custom_api_count ?? $currentSubscription->api_call_limit ?? $oldLimit;
-                $newLimit = max(0, $baseLimit + $pending - $overage);
-            } else {
+                // Handle null currentSubscription for new users
+                $baseLimit = $request->custom_api_count ?? ($currentSubscription->api_call_limit ?? 1000);
                 $newLimit = $baseLimit;
-            }
 
-            // 3. Create the NEW active subscription record for the new cycle
-            $packageId = $request->package_id ?? ($currentSubscription->package_id ?? 1);
-            // Ensure the package exists in the database to prevent foreign key constraint failure
-            if (!Package::where('id', $packageId)->exists()) {
-                Package::insert([
-                    'id' => $packageId,
-                    'package_name' => 'Default Package ' . $packageId,
-                    'package_price' => 0.00,
-                    'package_period' => 'month',
-                    'package_description' => 'Default plan created automatically',
-                    'monthly_limit' => 1000,
-                    'overage_rate' => 0.10,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+                // Mark all existing active ones as expired before creating the new one
+                foreach ($activeSubscriptions as $sub) {
+                    $sub->status = 'expired';
+                    $sub->save();
+                }
 
-            $subscription = new Subscription();
-            $subscription->merchant_id = $merchantId;
-            $subscription->user_id = $userId;
-            $subscription->package_id = $packageId ?? null;
-            $subscription->status = 'active';
-            $subscription->api_call_limit = $newLimit;
-            $subscription->api_calls_used = 0;
-            $subscription->overage_calls = 0;
-            $subscription->subscription_date = $startDate;
-            $subscription->renewal_date = $startDate->copy()->addMonth();
-            $subscription->is_custom_renewal = 1;
-            $subscription->save();
-        } else {
-            // 4. Mid-cycle update (adjusting current active subscription)
-            $subscription = $currentSubscription;
-            if (!empty($request->custom_api_count)) {
-                $subscription->api_call_limit = $request->custom_api_count;
-            }
-            if ($userId) {
+                // 3. Create the NEW active subscription record for the new cycle
+                $packageId = $request->package_id ?? ($currentSubscription->package_id ?? 1);
+                // Ensure the package exists in the database to prevent foreign key constraint failure
+                if (!Package::where('id', $packageId)->exists()) {
+                    Package::insert([
+                        'id' => $packageId,
+                        'package_name' => 'Default Package ' . $packageId,
+                        'package_price' => 0.00,
+                        'package_period' => 'month',
+                        'package_description' => 'Default plan created automatically',
+                        'monthly_limit' => 1000,
+                        'overage_rate' => 0.10,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                $subscription = new Subscription();
+                $subscription->merchant_id = $merchantId;
                 $subscription->user_id = $userId;
+                $subscription->package_id = $packageId;
+                $subscription->status = 'active';
+                $subscription->api_call_limit = $newLimit;
+                $subscription->api_calls_used = 0;
+                $subscription->overage_calls = 0;
+                $subscription->subscription_date = $startDate;
+                $subscription->renewal_date = $startDate->copy()->addMonth();
+                $subscription->is_custom_renewal = 1;
+                $subscription->save();
+
+                return $subscription;
+            } else {
+                // 4. Mid-cycle update (adjusting current active subscription)
+                // If there are duplicate active subscriptions, we will update the latest one and expire the others
+                $latestActive = $activeSubscriptions->sortByDesc('created_at')->first();
+                if (!$latestActive) {
+                    $latestActive = $currentSubscription;
+                }
+
+                foreach ($activeSubscriptions as $sub) {
+                    if ($sub->id !== $latestActive->id) {
+                        $sub->status = 'expired';
+                        $sub->save();
+                    }
+                }
+
+                if (!empty($request->custom_api_count)) {
+                    $latestActive->api_call_limit = $request->custom_api_count;
+                }
+                if ($userId) {
+                    $latestActive->user_id = $userId;
+                }
+                $latestActive->status = 'active';
+                $latestActive->save();
+
+                return $latestActive;
             }
-            $subscription->status = 'active';
-            $subscription->save();
-        }
+        });
 
         return response()->json([
             'status' => true,
-            'message' => $isExpired ? 'New subscription cycle started' : 'Subscription updated',
+            'message' => $isExpiredResult ? 'New subscription cycle started' : 'Subscription updated',
             'data' => $subscription
         ], 200);
     }

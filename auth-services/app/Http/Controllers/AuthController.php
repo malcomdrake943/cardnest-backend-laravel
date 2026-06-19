@@ -123,9 +123,9 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Generate JWT token using only merchant_id
+        // Generate JWT token using only merchant_id (with 1 day / 1440 minutes TTL)
         $customClaims = ['merchant_id' => $user->merchant_id];
-        $token = auth('api')->claims($customClaims)->login($user);
+        $token = auth('api')->setTTL(1440)->claims($customClaims)->login($user);
 
         return response()->json([
             'status' => true,

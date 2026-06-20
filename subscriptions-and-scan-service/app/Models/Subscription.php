@@ -19,6 +19,22 @@ class Subscription extends Model
         'renewal_date'
     ];
 
+    protected $casts = [
+        'is_custom_renewal' => 'integer',
+        'api_call_limit' => 'integer',
+        'api_calls_used' => 'integer',
+        'overage_calls' => 'integer',
+    ];
+
+    protected $appends = [
+        'api_calls_limit',
+    ];
+
+    public function getApiCallsLimitAttribute()
+    {
+        return $this->api_call_limit;
+    }
+
     public function package()
     {
         return $this->belongsTo(Package::class);

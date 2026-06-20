@@ -103,6 +103,7 @@ class ScanController extends Controller
             'renewal_date' => $subscription->renewal_date,
             'api_calls_used' => $subscription->api_calls_used,
             'api_call_limit' => $subscription->api_call_limit,
+            'api_calls_limit' => $subscription->api_calls_limit,
             'overage_calls' => $subscription->overage_calls,
         ];
 

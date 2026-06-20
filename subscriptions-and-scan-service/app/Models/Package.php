@@ -14,4 +14,10 @@ class Package extends Model
         'monthly_limit',
         'overage_rate',
     ];
+
+    protected $casts = [
+        'package_price' => 'float',
+        'monthly_limit' => 'integer',
+        'overage_rate' => 'float',
+    ];
 }

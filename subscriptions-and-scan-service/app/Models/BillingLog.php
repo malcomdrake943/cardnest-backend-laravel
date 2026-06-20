@@ -18,5 +18,10 @@ class BillingLog extends Model
         'due_date'
     ];
 
-
+    protected $casts = [
+        'base_calls' => 'integer',
+        'overage_calls' => 'integer',
+        'overage_charge' => 'float',
+        'is_paid' => 'boolean',
+    ];
 }

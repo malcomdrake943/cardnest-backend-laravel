@@ -396,8 +396,8 @@ class ScanController extends Controller
 
         $status = $request->status;
 
-        $hasActiveSubscription = $subscription && 
-            $subscription->status === 'active' && 
+        $hasActiveSubscription = $subscription &&
+            $subscription->status === 'active' &&
             now()->lte(\Carbon\Carbon::parse($subscription->renewal_date));
 
         if (!$hasActiveSubscription) {
@@ -492,6 +492,10 @@ class ScanController extends Controller
             // Base query
             $query = Scan::where('merchant_id', $merchantId);
 
+            if (!$isSuperAdmin && $merchantId === '4845925323992C4M') {
+                $query->where('created_at', '>=', '2026-06-22 10:00:00');
+            }
+
             // Filter by created_at if days is specified as a valid numeric string, except if 'all' is passed
             $filteredByDate = false;
             if ($days !== 'all' && is_numeric($days) && $days > 0) {
@@ -504,8 +508,11 @@ class ScanController extends Controller
 
             // Fallback: if we filtered by date and got 0 scans, fetch the latest 10 scans overall
             if ($scan->isEmpty() && $filteredByDate) {
-                $scan = Scan::where('merchant_id', $merchantId)
-                    ->latest()
+                $fallbackQuery = Scan::where('merchant_id', $merchantId);
+                if (!$isSuperAdmin && $merchantId === '4845925323992C4M') {
+                    $fallbackQuery->where('created_at', '>=', '2026-06-22 10:00:00');
+                }
+                $scan = $fallbackQuery->latest()
                     ->take(10)
                     ->get();
 

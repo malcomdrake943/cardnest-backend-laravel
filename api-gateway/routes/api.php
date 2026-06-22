@@ -10,6 +10,9 @@ Route::post('auth/login', [GatewayController::class, 'proxyToAuthService']);
 //Features routes
 Route::any('feature/get', [GatewayController::class, 'proxyToSubscriptionsService']);
 
+//Packages routes
+Route::get('Packages', [GatewayController::class, 'proxyToSubscriptionsService']);
+
 Route::post('device-info', [GatewayController::class, 'proxyToAuthService']);
 
 Route::get('getmerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);

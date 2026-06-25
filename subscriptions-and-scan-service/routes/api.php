@@ -24,6 +24,7 @@ Route::post('/merchantscan/generateToken', [ScanController::class, 'generateToke
 Route::post('/UpdateCardScan', [ScanController::class, 'UpdateCardScan']);
 Route::post('/scan/submitEncryptedData', [ScanController::class, 'submitEncryptedData']);
 Route::post('/scan/token', [ScanController::class, 'createScanToken']);
+Route::post('/scan/getEncryptedData', [ScanController::class, 'getEncryptedData']);
 Route::get('/getmerchantscanInfo', [MerchantController::class, 'getmerchantscanInfo']);
 Route::get('/getmerchantDisplayInfo', [MerchantController::class, 'getmerchantDisplayInfo']);
 Route::post('/updateMerchantScanInfo', [MerchantController::class, 'updateMerchantScanInfo']);
@@ -47,7 +48,6 @@ Route::middleware(['verify.user'])->group(function () {
 
 
     //SCAN ENDPOINTS 
-    Route::post('/scan/getEncryptedData', [ScanController::class, 'getEncryptedData']);
     Route::post('/scan/decodeToken', [ScanController::class, 'decodeToken']);
     Route::get('/merchant/getCardScans', [ScanController::class, 'getCardScans']);
 

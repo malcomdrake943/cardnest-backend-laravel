@@ -20,6 +20,7 @@ Route::any('merchantscan/{any?}', [GatewayController::class, 'proxyToSubscriptio
 Route::any('UpdateCardScan', [GatewayController::class, 'proxyToSubscriptionsService']);
 Route::post('scan/token', [GatewayController::class, 'proxyToSubscriptionsService']);
 Route::post('scan/submitEncryptedData', [GatewayController::class, 'proxyToSubscriptionsService']);
+Route::post('scan/getEncryptedData', [GatewayController::class, 'proxyToSubscriptionsService']);
 Route::any('getmerchantscanInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
 Route::any('updateMerchantScanInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
 

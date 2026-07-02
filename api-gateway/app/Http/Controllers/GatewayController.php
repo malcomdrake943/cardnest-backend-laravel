@@ -64,6 +64,22 @@ class GatewayController extends Controller
 
         $targetUrl = rtrim($baseUrl, '/') . '/' . ltrim($subPath, '/');
 
+        // Prevent circular routing to self which causes deadlocks/timeouts
+        $targetParts = parse_url($targetUrl);
+        $targetHost = $targetParts['host'] ?? '';
+        $targetPort = isset($targetParts['port']) ? (int)$targetParts['port'] : (($targetParts['scheme'] ?? 'http') === 'https' ? 443 : 80);
+
+        $requestHost = $request->getHost();
+        $requestPort = (int)$request->getPort();
+
+        if ($requestHost === $targetHost && $requestPort === $targetPort) {
+            return response()->json([
+                'status' => false,
+                'message' => 'API Gateway Configuration Error',
+                'error' => "Circular routing detected: The Gateway is configured to forward requests to itself ($targetUrl). Please check the environment variables (e.g. AUTH_SERVICE_URL, SUBSCRIPTIONS_SERVICE_URL) on the server."
+            ], 500);
+        }
+
         // Determine if request is multipart/form-data
         $contentType = $request->header('Content-Type');
         $isMultipart = str_contains((string) $contentType, 'multipart/form-data') || !empty($request->allFiles());

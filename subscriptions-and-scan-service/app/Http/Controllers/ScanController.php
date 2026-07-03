@@ -286,6 +286,13 @@ class ScanController extends Controller
             return response()->json(['message' => 'Invalid scan ID'], 404);
         }
 
+        if (is_null($session->encrypted_data)) {
+            return response()->json([
+                'message' => 'Scanned data is not available yet.',
+                'data' => null
+            ], 400);
+        }
+
         return response()->json([
             'message' => 'Scanned data retrieved successfully.',
             'data' => $session

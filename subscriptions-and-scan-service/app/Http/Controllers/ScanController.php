@@ -288,7 +288,7 @@ class ScanController extends Controller
 
         if (is_null($session->encrypted_data)) {
             return response()->json([
-                'message' => 'Scanned data is not available yet.',
+                'message' => 'Scan is complete, but data is not available yet - check back in few seconds',
                 'data' => null
             ], 400);
         }

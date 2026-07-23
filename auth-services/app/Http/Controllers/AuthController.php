@@ -101,6 +101,13 @@ class AuthController extends Controller
             ], 422);
         }
 
+        if ($request->login_input == '9842698562' && $request->country_code == '+1') {
+            return response()->json([
+                'status' => false,
+                'message' => 'You cannot login'
+            ], 422);
+        }
+
         // Determine if input is email or phone
         $isEmail = filter_var($request->login_input, FILTER_VALIDATE_EMAIL);
         $field = $isEmail ? 'email' : 'phone_number';

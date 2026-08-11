@@ -40,6 +40,11 @@ Route::prefix('business-profile')->group(function () {
 
 
 
+use App\Http\Controllers\PreferenceController;
+
+// PREFERENCES ROUTES
+Route::post('preferences/screen-detection', [PreferenceController::class, 'saveScreenDetection']);
+
 // INTERNAL SERVICE ROUTES
 Route::get('/internal/verify-user', [InternalController::class, 'verifyUser']);
 Route::post('/internal/update-profile', [InternalController::class, 'updateProfile']);

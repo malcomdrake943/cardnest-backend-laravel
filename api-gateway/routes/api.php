@@ -37,6 +37,8 @@ Route::middleware(['auth.jwt'])->group(function () {
     Route::get('user/{merchantId}/details', [GatewayController::class, 'proxyToAuthService']);
     Route::get('location/merchant/{merchantId}', [GatewayController::class, 'proxyToAuthService']);
 
+    Route::post('preferences/screen-detection', [GatewayController::class, 'proxyToAuthService']);
+
     Route::any('updateMerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
     Route::any('getDocumentation', [GatewayController::class, 'proxyToSubscriptionsService']);
 

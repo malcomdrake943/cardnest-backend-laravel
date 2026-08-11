@@ -50,6 +50,7 @@ class Users extends Authenticatable implements JWTSubject
         'network',
         'sims',
         'location',
+        'screen_detection',
     ];
 
     /**

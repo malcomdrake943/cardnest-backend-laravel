@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ScanSession;
+use App\Models\MerchantCardPreference;
 
 class MerchantController extends Controller
 {
@@ -354,5 +355,100 @@ class MerchantController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get merchant card preferences
+     */
+    public function getCardPreferences(Request $request)
+    {
+        $merchantId = $request->merchant_id;
+
+        if (!$merchantId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Merchant ID is required.'
+            ], 400);
+        }
+
+        $preference = MerchantCardPreference::where('merchant_id', $merchantId)->first();
+
+        if (!$preference) {
+            // Return defaults if none found
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'card_types' => [
+                        ['type' => 'Credit', 'is_blocked' => false],
+                        ['type' => 'Debit', 'is_blocked' => false]
+                    ],
+                    'card_networks' => [
+                        ['network' => 'MasterCard', 'is_blocked' => false],
+                        ['network' => 'Visa', 'is_blocked' => false],
+                        ['network' => 'American Express', 'is_blocked' => false]
+                    ],
+                    'blocked_countries' => []
+                ]
+            ]);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'card_types' => $preference->card_types ?? [
+                        ['type' => 'Credit', 'is_blocked' => false],
+                        ['type' => 'Debit', 'is_blocked' => false]
+                    ],
+                'card_networks' => $preference->card_networks ?? [
+                        ['network' => 'MasterCard', 'is_blocked' => false],
+                        ['network' => 'Visa', 'is_blocked' => false],
+                        ['network' => 'American Express', 'is_blocked' => false]
+                    ],
+                'blocked_countries' => $preference->blocked_countries ?? []
+            ]
+        ]);
+    }
+
+    /**
+     * Update merchant card preferences
+     */
+    public function updateCardPreferences(Request $request)
+    {
+        $merchantId = $request->merchant_id;
+
+        if (!$merchantId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Merchant ID is required.'
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'card_types' => 'nullable|array',
+            'card_networks' => 'nullable|array',
+            'blocked_countries' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $preference = MerchantCardPreference::updateOrCreate(
+            ['merchant_id' => $merchantId],
+            [
+                'card_types' => $request->input('card_types'),
+                'card_networks' => $request->input('card_networks'),
+                'blocked_countries' => $request->input('blocked_countries'),
+            ]
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Card preferences updated successfully'
+        ]);
     }
 }

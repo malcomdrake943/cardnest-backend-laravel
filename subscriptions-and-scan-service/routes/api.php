@@ -45,6 +45,8 @@ Route::middleware(['verify.user'])->group(function () {
     // MERCHANT ENDPOINTS 
     Route::post('/updateMerchantDisplayInfo', [MerchantController::class, 'updateMerchantDisplayInfo']);
     Route::get('/getDocumentation', [SuperAdminController::class, 'getDocumentation']);
+    Route::get('/merchant/card-preferences', [MerchantController::class, 'getCardPreferences']);
+    Route::post('/merchant/card-preferences', [MerchantController::class, 'updateCardPreferences']);
 
 
     //SCAN ENDPOINTS 

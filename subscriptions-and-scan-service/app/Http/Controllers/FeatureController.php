@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Feature;
+use App\Models\User;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class FeatureController extends Controller
@@ -78,52 +79,24 @@ class FeatureController extends Controller
 
     public function getFeatures(Request $request)
     {
-        $userId = null;
+        $merchantId = $request->input('merchant_id');
 
-        if ($request->has('auth_token')) {
-            $payload = $this->decodeAuthToken($request->auth_token);
-            if (!$payload) {
-                return response()->json([
-                    'code' => 400,
-                    'message' => 'Invalid or expired auth token.'
-                ], 400);
-            }
-            $userId = $payload->get('sub');
-        } elseif ($request->bearerToken()) {
-            try {
-                $payload = JWTAuth::setToken($request->bearerToken())->getPayload();
-                $userId = $payload->get('sub');
-            } catch (\Exception $e) {
-                Log::error('FeatureController getFeatures bearerToken error: ' . $e->getMessage());
-                return response()->json([
-                    'code' => 401,
-                    'message' => 'Invalid or expired Authorization token.'
-                ], 401);
-            }
-        } elseif ($request->auth_user && isset($request->auth_user['id'])) {
-            $userId = $request->auth_user['id'];
-        } elseif ($request->has('user_id')) {
-            $userId = $request->user_id;
-        }
-
-        if (!$userId) {
+        if (!$merchantId) {
             return response()->json([
                 'code' => 400,
-                'message' => 'A valid auth_token, Authorization header, or user_id is required.'
+                'message' => 'The merchant_id is required parameter.'
             ], 400);
         }
 
-        // Check if user exists via auth service
-        $authUser = $this->getVerifiedUser($userId);
-        if (!$authUser) {
+        $user = User::where('merchant_id', $merchantId)->first();
+        if (!$user) {
             return response()->json([
                 'code' => 404,
-                'message' => 'User not found with the provided user_id.'
+                'message' => 'User not found with the provided merchant_id.'
             ], 404);
         }
-
         // Get features for the user
-        $features = Feature::where('user_id', $userId)->get();
+        $features = Feature::where('user_id', $user->id)->get();
 
         if ($features->isEmpty()) {
             return response()->json([
@@ -140,7 +113,6 @@ class FeatureController extends Controller
             return array_diff_key($feature->toArray(), array_flip($metadataKeys));
         });
 
-        $merchantId = $authUser['merchant_id'] ?? null;
         $cardPreferences = null;
 
         if ($merchantId) {

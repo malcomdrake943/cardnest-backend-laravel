@@ -50,12 +50,12 @@ class FeatureController extends Controller
     }
 
     /**
-     * Verify if the user exists in the system via the auth service.
+     * Verify if the user exists in the system via the auth service and return user data.
      *
-     * @param int $userId
-     * @return bool
+     * @param int|string $userId
+     * @return array|null
      */
-    private function userExists($userId): bool
+    private function getVerifiedUser($userId)
     {
         try {
             $response = Http::withHeaders([
@@ -66,10 +66,13 @@ class FeatureController extends Controller
                 'user_id' => $userId,
             ]);
 
-            return $response->successful();
+            if ($response->successful()) {
+                return $response->json('data');
+            }
+            return null;
         } catch (\Exception $e) {
-            Log::error('FeatureController userExists verification error: ' . $e->getMessage());
-            return false;
+            Log::error('FeatureController getVerifiedUser verification error: ' . $e->getMessage());
+            return null;
         }
     }
 
@@ -111,7 +114,8 @@ class FeatureController extends Controller
         }
 
         // Check if user exists via auth service
-        if (!$this->userExists($userId)) {
+        $authUser = $this->getVerifiedUser($userId);
+        if (!$authUser) {
             return response()->json([
                 'code' => 404,
                 'message' => 'User not found with the provided user_id.'
@@ -136,11 +140,46 @@ class FeatureController extends Controller
             return array_diff_key($feature->toArray(), array_flip($metadataKeys));
         });
 
+        $merchantId = $authUser['merchant_id'] ?? null;
+        $cardPreferences = null;
+
+        if ($merchantId) {
+            $preference = \App\Models\MerchantCardPreference::where('merchant_id', $merchantId)->first();
+            if ($preference) {
+                $cardPreferences = [
+                    'card_types' => $preference->card_types ?? [
+                        ['type' => 'Credit', 'is_blocked' => false],
+                        ['type' => 'Debit', 'is_blocked' => false]
+                    ],
+                    'card_networks' => $preference->card_networks ?? [
+                        ['network' => 'MasterCard', 'is_blocked' => false],
+                        ['network' => 'Visa', 'is_blocked' => false],
+                        ['network' => 'American Express', 'is_blocked' => false]
+                    ],
+                    'blocked_countries' => $preference->blocked_countries ?? []
+                ];
+            } else {
+                $cardPreferences = [
+                    'card_types' => [
+                        ['type' => 'Credit', 'is_blocked' => false],
+                        ['type' => 'Debit', 'is_blocked' => false]
+                    ],
+                    'card_networks' => [
+                        ['network' => 'MasterCard', 'is_blocked' => false],
+                        ['network' => 'Visa', 'is_blocked' => false],
+                        ['network' => 'American Express', 'is_blocked' => false]
+                    ],
+                    'blocked_countries' => []
+                ];
+            }
+        }
+
         return response()->json(array_merge([
             'code' => 200,
             'message' => 'Features retrieved successfully.',
         ], $metadata, [
-            'data' => $data
+            'data' => $data,
+            'preferences' => $cardPreferences
         ]), 200);
     }
 
@@ -160,7 +199,7 @@ class FeatureController extends Controller
         $userId = $request->auth_user['id'];
 
         // Check if user exists via auth service
-        if (!$this->userExists($userId)) {
+        if (!$this->getVerifiedUser($userId)) {
             return response()->json([
                 'code' => 404,
                 'message' => 'User not found with the provided user_id.'
@@ -195,7 +234,7 @@ class FeatureController extends Controller
         $userId = $request->auth_user['id'];
 
         // Check if user exists via auth service
-        if (!$this->userExists($userId)) {
+        if (!$this->getVerifiedUser($userId)) {
             return response()->json([
                 'code' => 404,
                 'message' => 'User not found with the provided user_id.'

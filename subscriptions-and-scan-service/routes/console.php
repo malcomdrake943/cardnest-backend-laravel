@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
 
-// Run the custom subscription renewal daily at midnight
-Schedule::command('subscriptions:renew-custom')->daily();
+// Run the custom subscription renewal every minute for testing
+Schedule::command('subscriptions:renew-custom')->everyMinute();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

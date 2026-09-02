@@ -127,9 +127,11 @@ class RenewCustomSubscriptions extends Command
             } catch (\Exception $e) {
                 DB::rollBack();
                 $this->error("Failed to renew for merchant {$existing->merchant_id}: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error("Failed to renew custom subscription for merchant {$existing->merchant_id}: " . $e->getMessage());
             }
         }
 
         $this->info('Custom subscription renewal process completed.');
+        \Illuminate\Support\Facades\Log::info('Custom subscription renewal process completed.');
     }
 }

@@ -26,13 +26,27 @@ class InternalController extends Controller
             ], 401);
         }
 
-        $userId = $request->input('id') ?? $request->input('user_id') ?? $request->input('merchant_id');
+        $id = $request->input('id') ?? $request->input('user_id');
+        $merchantId = $request->input('merchant_id');
 
         $query = Users::query();
 
-        if ($userId) {
-            $query->where('id', $userId)
-                ->orwhere('merchant_id', $userId);
+        if ($id && $merchantId) {
+            $query->where(function ($q) use ($id, $merchantId) {
+                if (is_numeric($id)) {
+                    $q->where('id', $id);
+                }
+                $q->orWhere('merchant_id', $merchantId);
+            });
+        } elseif ($merchantId) {
+            $query->where('merchant_id', $merchantId);
+        } elseif ($id) {
+            $query->where(function ($q) use ($id) {
+                if (is_numeric($id)) {
+                    $q->where('id', $id);
+                }
+                $q->orWhere('merchant_id', $id);
+            });
         } else {
             return response()->json([
                 'status' => false,

@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Feature;
-use App\Models\User;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class FeatureController extends Controller
@@ -53,19 +52,32 @@ class FeatureController extends Controller
     /**
      * Verify if the user exists in the system via the auth service and return user data.
      *
-     * @param int|string $userId
+     * @param int|string|null $userId
+     * @param string|null $merchantId
      * @return array|null
      */
-    private function getVerifiedUser($userId)
+    private function getVerifiedUser($userId = null, $merchantId = null)
     {
         try {
+            $params = [];
+            if ($userId !== null) {
+                $params['id'] = $userId;
+                $params['user_id'] = $userId;
+            }
+            if ($merchantId !== null) {
+                $params['merchant_id'] = $merchantId;
+            }
+
+            if (empty($params)) {
+                return null;
+            }
+
+            $authUrl = config('services.internal.auth', 'http://localhost:8001');
+
             $response = Http::withHeaders([
                 'X-Internal-Service-Token' => config('services.internal.token'),
                 'Accept' => 'application/json',
-            ])->get(config('services.internal.auth') . '/api/internal/verify-user', [
-                'id' => $userId,
-                'user_id' => $userId,
-            ]);
+            ])->get(rtrim($authUrl, '/') . '/api/internal/verify-user', $params);
 
             if ($response->successful()) {
                 return $response->json('data');
@@ -88,15 +100,24 @@ class FeatureController extends Controller
             ], 400);
         }
 
-        $user = User::where('merchant_id', $merchantId)->first();
+        $user = $this->getVerifiedUser(null, $merchantId);
         if (!$user) {
             return response()->json([
                 'code' => 404,
                 'message' => 'User not found with the provided merchant_id.'
             ], 404);
         }
+
+        $userId = is_array($user) ? ($user['id'] ?? null) : ($user->id ?? null);
+        if (!$userId) {
+            return response()->json([
+                'code' => 404,
+                'message' => 'User ID could not be determined for the provided merchant_id.'
+            ], 404);
+        }
+
         // Get features for the user
-        $features = Feature::where('user_id', $user->id)->get();
+        $features = Feature::where('user_id', $userId)->get();
 
         if ($features->isEmpty()) {
             return response()->json([

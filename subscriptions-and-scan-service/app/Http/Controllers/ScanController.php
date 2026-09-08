@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Scan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Models\User;
 use App\Models\ScanSession;
 use App\Models\Subscription;
 use App\Models\BillingLog;

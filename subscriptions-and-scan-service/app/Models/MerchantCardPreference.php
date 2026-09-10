@@ -10,12 +10,14 @@ class MerchantCardPreference extends Model
         'merchant_id',
         'card_types',
         'card_networks',
+        'card_levels',
         'blocked_countries',
     ];
 
     protected $casts = [
         'card_types' => 'array',
         'card_networks' => 'array',
+        'card_levels' => 'array',
         'blocked_countries' => 'array',
     ];
 }

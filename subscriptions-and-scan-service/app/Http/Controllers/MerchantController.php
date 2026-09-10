@@ -387,6 +387,7 @@ class MerchantController extends Controller
                         ['network' => 'Visa', 'is_blocked' => false],
                         ['network' => 'American Express', 'is_blocked' => false]
                     ],
+                    'card_levels' => [],
                     'blocked_countries' => []
                 ]
             ]);
@@ -404,6 +405,7 @@ class MerchantController extends Controller
                         ['network' => 'Visa', 'is_blocked' => false],
                         ['network' => 'American Express', 'is_blocked' => false]
                     ],
+                'card_levels' => $preference->card_levels ?? [],
                 'blocked_countries' => $preference->blocked_countries ?? []
             ]
         ]);
@@ -426,6 +428,7 @@ class MerchantController extends Controller
         $validator = Validator::make($request->all(), [
             'card_types' => 'nullable|array',
             'card_networks' => 'nullable|array',
+            'card_levels' => 'nullable|array',
             'blocked_countries' => 'nullable|array',
         ]);
 
@@ -442,6 +445,7 @@ class MerchantController extends Controller
             [
                 'card_types' => $request->input('card_types'),
                 'card_networks' => $request->input('card_networks'),
+                'card_levels' => $request->input('card_levels'),
                 'blocked_countries' => $request->input('blocked_countries'),
             ]
         );

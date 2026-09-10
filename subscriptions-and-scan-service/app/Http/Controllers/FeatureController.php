@@ -149,6 +149,7 @@ class FeatureController extends Controller
                         ['network' => 'Visa', 'is_blocked' => false],
                         ['network' => 'American Express', 'is_blocked' => false]
                     ],
+                    'card_levels' => $preference->card_levels ?? [],
                     'blocked_countries' => $preference->blocked_countries ?? []
                 ];
             } else {
@@ -162,6 +163,7 @@ class FeatureController extends Controller
                         ['network' => 'Visa', 'is_blocked' => false],
                         ['network' => 'American Express', 'is_blocked' => false]
                     ],
+                    'card_levels' => [],
                     'blocked_countries' => []
                 ];
             }

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schedule;
 
 
 // Run the custom subscription renewal every minute for testing
-Schedule::command('subscriptions:renew-custom')->everyMinute();
+Schedule::command('cardnest:renew-custom-subscriptions')->everyMinute();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

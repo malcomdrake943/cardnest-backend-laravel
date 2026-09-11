@@ -15,7 +15,7 @@ class RenewCustomSubscriptions extends Command
      *
      * @var string
      */
-    protected $signature = 'subscriptions:renew-custom {merchant_id?}';
+    protected $signature = 'cardnest:renew-custom-subscriptions {merchant_id?}';
 
     /**
      * The console command description.

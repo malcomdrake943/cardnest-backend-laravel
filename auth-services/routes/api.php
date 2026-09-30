@@ -17,6 +17,7 @@ Route::get('/user', function (Request $request) {
 // DEVICE AND LOCATION ROUTES
 Route::post('/device-info', [UserDeviceInfoController::class, 'store']);
 Route::post('/user-device-info', [UserinfoDevince::class, 'store']);
+Route::get('/user-device-info/{merchantId}', [UserinfoDevince::class, 'getByMerchant']);
 Route::post('/merchant-location', [MerchantLocationController::class, 'store']);
 Route::get('/user/{merchantId}/details', [UserWithLocationController::class, 'getUserWithLocations']);
 Route::get('/device/merchant/{merchantId}', [UserDeviceInfoController::class, 'getByMerchant']);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Users as User;
+use App\Models\DeviceInfo;
 
 class UserDeviceInfoController extends Controller
 {
@@ -12,7 +13,7 @@ class UserDeviceInfoController extends Controller
         $data = $request->validate([
             'DeviceId' => 'required|string',
             'merchantId' => 'required|string',
-            'sessionId' => 'nullable|string',
+            'sessionId' => 'required|string',
             'device' => 'required|array',
             'device.bootCount' => 'nullable|integer',
             'device.brand' => 'nullable|string',
@@ -45,6 +46,8 @@ class UserDeviceInfoController extends Controller
             'sims.*.sim' => 'nullable|string',
             'sims.*.simType' => 'nullable|string',
             'sims.*.subscriptionId' => 'nullable|integer',
+
+            'location' => 'required|array',
         ]);
 
         $user = User::where('merchant_id', $data['merchantId'])->first();
@@ -72,14 +75,14 @@ class UserDeviceInfoController extends Controller
             'securityPatch' => $device['securityPatch'] ?? null,
         ];
 
-        $user->update([
+        DeviceInfo::create([
             'device_id' => $data['DeviceId'],
+            'merchant_id' => $data['merchantId'],
             'session_id' => $data['sessionId'],
-            'device_timestamp' => null,
-            'location' => null,
             'device' => $deviceInfo,
             'network' => $data['network'],
             'sims' => $data['sims'],
+            'location' => $data['location'],
         ]);
 
         return response()->json([

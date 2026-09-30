@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Users as User;
+use App\Models\DeviceInfo;
 
 class UserinfoDevince extends Controller
 {
@@ -72,19 +73,31 @@ class UserinfoDevince extends Controller
             'securityPatch' => $device['securityPatch'] ?? null,
         ];
 
-        $user->update([
+        DeviceInfo::create([
             'device_id' => $data['DeviceId'],
+            'merchant_id' => $data['merchantId'],
             'session_id' => $data['sessionId'],
-            'device_timestamp' => null,
-            'location' => null,
             'device' => $deviceInfo,
             'network' => $data['network'],
             'sims' => $data['sims'],
+            'location' => $data['location'],
         ]);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Device info stored successfully',
+        ]);
+    }
+
+    public function getByMerchant($merchantId)
+    {
+        $deviceInfos = DeviceInfo::where('merchant_id', $merchantId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $deviceInfos,
         ]);
     }
 }

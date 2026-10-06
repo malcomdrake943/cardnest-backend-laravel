@@ -14,7 +14,7 @@ class UserDeviceInfoController extends Controller
             'DeviceId' => 'required|string',
             'merchantId' => 'required|string',
             'sessionId' => 'required|string',
-            'device' => 'required|array',
+            'device' => 'nullable|array',
             'device.bootCount' => 'nullable|integer',
             'device.brand' => 'nullable|string',
             'device.buildFingerprint' => 'nullable|string',
@@ -27,7 +27,7 @@ class UserDeviceInfoController extends Controller
             'device.sdkInt' => 'nullable|integer',
             'device.securityPatch' => 'nullable|string',
 
-            'network' => 'required|array',
+            'network' => 'nullable|array',
             'network.activeTransports' => 'nullable|array',
             'network.bandwidthKbpsDown' => 'nullable|integer',
             'network.bandwidthKbpsUp' => 'nullable|integer',
@@ -40,14 +40,14 @@ class UserDeviceInfoController extends Controller
             'network.wifi.linkSpeedMbps' => 'nullable|integer',
             'network.wifi.rssi' => 'nullable|integer',
 
-            'sims' => 'required|array',
+            'sims' => 'nullable|array',
             'sims.*.carrierId' => 'nullable|integer',
             'sims.*.mccmmc' => 'nullable|string',
             'sims.*.sim' => 'nullable|string',
             'sims.*.simType' => 'nullable|string',
             'sims.*.subscriptionId' => 'nullable|integer',
 
-            'location' => 'required|array',
+            'location' => 'nullable|array',
         ]);
 
         $user = User::where('merchant_id', $data['merchantId'])->first();

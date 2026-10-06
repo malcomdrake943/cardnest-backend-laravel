@@ -9,6 +9,7 @@ use App\Http\Controllers\UserDeviceInfoController;
 use App\Http\Controllers\UserinfoDevince;
 use App\Http\Controllers\MerchantLocationController;
 use App\Http\Controllers\UserWithLocationController;
+use App\Http\Controllers\MerchantBlockedIpController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -24,6 +25,11 @@ Route::get('/device/merchant/{merchantId}', [UserDeviceInfoController::class, 'g
 Route::get('/devices', [UserDeviceInfoController::class, 'getAllDevices']);
 Route::get('/location/merchant/{merchantId}', [MerchantLocationController::class, 'getByMerchant']);
 Route::get('/locations', [MerchantLocationController::class, 'getAll']);
+
+// BLOCKED IPs ROUTES
+Route::get('/merchant/{merchantId}/blocked-ips', [MerchantBlockedIpController::class, 'index']);
+Route::post('/merchant/{merchantId}/blocked-ips', [MerchantBlockedIpController::class, 'store']);
+Route::delete('/merchant/{merchantId}/blocked-ips/{ipAddress}', [MerchantBlockedIpController::class, 'destroy']);
 
 //LOGIN AND OTP ROUTES
 Route::post('signup', [AuthController::class, 'signup']);

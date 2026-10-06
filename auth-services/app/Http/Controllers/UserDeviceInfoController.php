@@ -63,10 +63,10 @@ class UserDeviceInfoController extends Controller
             'device_id' => $data['DeviceId'],
             'merchant_id' => $data['merchantId'],
             'session_id' => $data['sessionId'],
-            'device' => $data['device'],
-            'network' => $data['network'],
-            'sims' => $data['sims'],
-            'location' => $data['location'],
+            'device' => $data['device'] ?? null,
+            'network' => $data['network'] ?? null,
+            'sims' => $data['sims'] ?? null,
+            'location' => $data['location'] ?? null,
         ]);
 
         return response()->json([

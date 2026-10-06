@@ -59,22 +59,6 @@ class UserDeviceInfoController extends Controller
             ], 404);
         }
 
-        $device = $data['device'];
-
-        $deviceInfo = [
-            'bootCount' => $device['bootCount'] ?? null,
-            'brand' => $device['brand'] ?? null,
-            'buildFingerprint' => $device['buildFingerprint'] ?? null,
-            'buildId' => $device['buildId'] ?? null,
-            'device' => $device['device'] ?? null,
-            'manufacturer' => $device['manufacturer'] ?? null,
-            'model' => $device['model'] ?? null,
-            'product' => $device['product'] ?? null,
-            'release' => $device['release'] ?? null,
-            'sdkInt' => $device['sdkInt'] ?? null,
-            'securityPatch' => $device['securityPatch'] ?? null,
-        ];
-
         DeviceInfo::create([
             'device_id' => $data['DeviceId'],
             'merchant_id' => $data['merchantId'],

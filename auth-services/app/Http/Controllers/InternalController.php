@@ -54,7 +54,7 @@ class InternalController extends Controller
             ], 400);
         }
 
-        $user = $query->with('businessProfile')->first();
+        $user = $query->with(['businessProfile', 'parentMerchant.businessProfile'])->first();
 
         if (!$user) {
             return response()->json([
@@ -63,21 +63,37 @@ class InternalController extends Controller
             ], 404);
         }
 
+        if ($user->is_additional_admin && $user->admin_status === 'inactive') {
+            return response()->json([
+                'status' => false,
+                'message' => 'User account is inactive'
+            ], 403);
+        }
+
+        $merchantOwner = ($user->is_additional_admin && $user->parentMerchant)
+            ? $user->parentMerchant
+            : $user;
+
         return response()->json([
             'status' => true,
             'message' => 'User verified',
             'data' => [
-                'id' => $user->id,
-                'merchant_id' => $user->merchant_id,
-                'email' => $user->email,
-                'aes_key' => $user->aes_key,
-                'on_trial' => $user->on_trial,
-                'trial_ends_at' => $user->trial_ends_at,
-                'trial_calls_remaining' => $user->trial_calls_remaining,
-                'business_verified' => $user->business_verified,
-                'business_profile' => $user->businessProfile ? [
-                    'display_name' => $user->businessProfile->display_name,
-                    'display_logo' => $user->businessProfile->display_logo,
+                'id' => $merchantOwner->id,
+                'merchant_id' => $merchantOwner->merchant_id,
+                'email' => $merchantOwner->email,
+                'role' => $user->role,
+                'actor_user_id' => $user->id,
+                'is_additional_admin' => (bool) $user->is_additional_admin,
+                'access_type' => $user->is_additional_admin ? ($user->access_type ?? 'custom') : 'full',
+                'permissions' => $user->getEffectivePermissions(),
+                'aes_key' => $merchantOwner->aes_key,
+                'on_trial' => $merchantOwner->on_trial,
+                'trial_ends_at' => $merchantOwner->trial_ends_at,
+                'trial_calls_remaining' => $merchantOwner->trial_calls_remaining,
+                'business_verified' => $merchantOwner->business_verified,
+                'business_profile' => $merchantOwner->businessProfile ? [
+                    'display_name' => $merchantOwner->businessProfile->display_name,
+                    'display_logo' => $merchantOwner->businessProfile->display_logo,
                 ] : null
             ]
         ], 200);

@@ -39,27 +39,50 @@ Route::middleware(['auth.jwt'])->group(function () {
 
     Route::post('preferences/screen-detection', [GatewayController::class, 'proxyToAuthService']);
 
-    Route::any('updateMerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
-    Route::any('getDocumentation', [GatewayController::class, 'proxyToSubscriptionsService']);
+    // Merchant Admin IAM routes (must precede merchant/{any?} fallback)
+    Route::middleware(['merchant.permission:dashboard.admin_management'])
+        ->any('merchant/admins/{any?}', [GatewayController::class, 'proxyToAuthService'])
+        ->where('any', '.*');
+
+    Route::middleware(['merchant.permission:dashboard.display_settings,dashboard.profile'])
+        ->any('updateMerchantDisplayInfo', [GatewayController::class, 'proxyToSubscriptionsService']);
+    Route::middleware(['merchant.permission:dashboard.documents,dashboard.developers'])
+        ->any('getDocumentation', [GatewayController::class, 'proxyToSubscriptionsService']);
 
     // Admin-only business profile decision route
     Route::middleware(['admin'])->post('business-profile/decision', [GatewayController::class, 'proxyToAuthService']);
 
-    Route::any('feature/store', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
-    Route::post('scan/storeFeature', [GatewayController::class, 'proxyToSubscriptionsService']);
+    Route::middleware(['merchant.permission:dashboard.security_features'])
+        ->any('feature/store', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+    Route::middleware(['merchant.permission:dashboard.security_features'])
+        ->post('scan/storeFeature', [GatewayController::class, 'proxyToSubscriptionsService']);
+
+    // Business profile status (needed by dashboard shell, profile, and KYC)
+    Route::get('business-profile/business-verification-status', [GatewayController::class, 'proxyToAuthService']);
 
     // Standard business profile routes
-    Route::any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
+    Route::middleware(['merchant.permission:dashboard.profile,dashboard.kyc'])
+        ->any('business-profile/{any?}', [GatewayController::class, 'proxyToAuthService'])->where('any', '.*');
 
     // Device and Location routes (proxied to Auth Service)
     Route::get('devices', [GatewayController::class, 'proxyToAuthService']);
     Route::get('locations', [GatewayController::class, 'proxyToAuthService']);
 
     // Subscriptions, Packages, Merchant, Scan, and Card Scan routes (proxied to Subscriptions Service)
-    Route::any('Subscriptions/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+    Route::middleware(['merchant.permission:dashboard.subscriptions,dashboard.billing,dashboard.overview,dashboard.developers'])
+        ->any('Subscriptions/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
     Route::any('Packages/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+
+    Route::middleware(['merchant.permission:dashboard.subscriptions,dashboard.billing,dashboard.overview'])
+        ->get('merchant/getOldSubscriptions', [GatewayController::class, 'proxyToSubscriptionsService']);
+    Route::middleware(['merchant.permission:dashboard.card_types,dashboard.security_features'])
+        ->any('merchant/card-preferences', [GatewayController::class, 'proxyToSubscriptionsService']);
+    Route::middleware(['merchant.permission:dashboard.scans,dashboard.overview'])
+        ->get('merchant/getCardScans', [GatewayController::class, 'proxyToSubscriptionsService']);
     Route::any('merchant/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
-    Route::any('scan/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
+
+    Route::middleware(['merchant.permission:dashboard.scans,dashboard.developers,dashboard.overview'])
+        ->any('scan/{any?}', [GatewayController::class, 'proxyToSubscriptionsService'])->where('any', '.*');
 
 
     // Admin-only Superadmin routes (restricted to SUPER_ADMIN role)

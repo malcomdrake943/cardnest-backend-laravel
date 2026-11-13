@@ -102,6 +102,14 @@ class BusinessProfileController extends Controller
             ], 404);
         }
 
+        // If an additional admin submits a profile update, resolve to the primary merchant account
+        if ($user->is_additional_admin && $user->parent_merchant_id) {
+            $primaryUser = Users::find($user->parent_merchant_id);
+            if ($primaryUser) {
+                $user = $primaryUser;
+            }
+        }
+
         // Validate the request
         $validator = Validator::make($request->all(), [
             'business_name' => 'required|string|max:255',
@@ -409,9 +417,11 @@ class BusinessProfileController extends Controller
         }
 
         try {
-            // Get user with business profile and linked account holder
-            $user = Users::with('businessProfile.accountHolder')
-                ->find($request->user_id);
+            // Get user with business profile and linked account holder (or parent merchant for additional admins)
+            $user = Users::with([
+                'businessProfile.accountHolder',
+                'parentMerchant.businessProfile.accountHolder',
+            ])->find($request->user_id);
 
             if (!$user) {
                 return response()->json([
@@ -420,15 +430,28 @@ class BusinessProfileController extends Controller
                 ], 404);
             }
 
-            // Get all user attributes
+            $merchantOwner = ($user->is_additional_admin && $user->parentMerchant)
+                ? $user->parentMerchant
+                : $user;
+
+            // Get all user attributes while preserving IAM metadata for additional admins
             $userData = $user->toArray();
+            $userData['merchant_id'] = $merchantOwner->merchant_id;
+            $userData['business_verified'] = $merchantOwner->business_verified;
+            $userData['verification_reason'] = $merchantOwner->verification_reason;
+            $userData['is_additional_admin'] = (bool) $user->is_additional_admin;
+            $userData['parent_merchant_id'] = $user->parent_merchant_id;
+            $userData['access_type'] = $user->is_additional_admin ? ($user->access_type ?? 'custom') : 'full';
+            $userData['permissions'] = $user->getEffectivePermissions();
+            $userData['status'] = $user->admin_status ?? 'active';
+            $userData['phone_no'] = $user->phone_number;
 
             // Add verification status message
-            $userData['verification_status_message'] = $this->getStatusMessage($user->business_verified);
+            $userData['verification_status_message'] = $this->getStatusMessage($merchantOwner->business_verified);
 
             // Include the business profile data
-            if ($user->businessProfile) {
-                $userData['business_profile'] = $user->businessProfile->toArray();
+            if ($merchantOwner->businessProfile) {
+                $userData['business_profile'] = $merchantOwner->businessProfile->toArray();
             } else {
                 $userData['business_profile'] = null;
             }

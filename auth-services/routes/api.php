@@ -10,6 +10,7 @@ use App\Http\Controllers\UserinfoDevince;
 use App\Http\Controllers\MerchantLocationController;
 use App\Http\Controllers\UserWithLocationController;
 use App\Http\Controllers\MerchantBlockedIpController;
+use App\Http\Controllers\MerchantAdminController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -30,6 +31,16 @@ Route::get('/locations', [MerchantLocationController::class, 'getAll']);
 Route::get('/merchant/{merchantId}/blocked-ips', [MerchantBlockedIpController::class, 'index']);
 Route::post('/merchant/{merchantId}/blocked-ips', [MerchantBlockedIpController::class, 'store']);
 Route::delete('/merchant/{merchantId}/blocked-ips/{ipAddress}', [MerchantBlockedIpController::class, 'destroy']);
+
+// MERCHANT ADMIN IAM ROUTES
+Route::prefix('merchant/admins')->group(function () {
+    Route::get('/', [MerchantAdminController::class, 'index']);
+    Route::post('/', [MerchantAdminController::class, 'store']);
+    Route::get('/{id}', [MerchantAdminController::class, 'show'])->whereNumber('id');
+    Route::put('/{id}/permissions', [MerchantAdminController::class, 'updatePermissions'])->whereNumber('id');
+    Route::patch('/{id}/status', [MerchantAdminController::class, 'updateStatus'])->whereNumber('id');
+    Route::delete('/{id}', [MerchantAdminController::class, 'destroy'])->whereNumber('id');
+});
 
 //LOGIN AND OTP ROUTES
 Route::post('signup', [AuthController::class, 'signup']);

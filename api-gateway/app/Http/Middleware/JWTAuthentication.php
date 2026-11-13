@@ -45,6 +45,35 @@ class JWTAuthentication
             ], 401);
         }
 
+        // Check if additional admin has been deactivated
+        if ($user->is_additional_admin && $user->admin_status === 'inactive') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been deactivated by the merchant administrator. Please contact your organization owner.'
+            ], 403);
+        }
+
+        // Reject tokens issued at or before token revocation timestamp
+        try {
+            $payload = JWTAuth::parseToken()->getPayload();
+            $iat = $payload->get('iat');
+            if ($user->tokens_revoked_at && $iat && (int) $iat <= $user->tokens_revoked_at->timestamp) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Token has been revoked'
+                ], 401);
+            }
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Token is invalid'
+            ], 401);
+        }
+
+        if ($user->is_additional_admin) {
+            $user->load('parentMerchant');
+        }
+
         // Attach the authenticated user to the request context
         $request->setUserResolver(function () use ($user) {
             return $user;

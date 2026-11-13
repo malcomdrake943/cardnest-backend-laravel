@@ -49,6 +49,9 @@ class AuthController extends Controller
             'trial_ends_at' => null,
             'trial_calls_remaining' => null,
             'on_trial' => false,
+            'is_additional_admin' => false,
+            'access_type' => 'full',
+            'admin_status' => 'active',
         ]);
 
         $merchantId = Str::random(14);
@@ -119,7 +122,7 @@ class AuthController extends Controller
             $query->where('service_type', $request->service_type);
         }
 
-        $user = $query->first();
+        $user = $query->with('parentMerchant')->first();
 
         // Check if user exists
         if (!$user) {
@@ -130,19 +133,43 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Generate JWT token using only merchant_id (with 1 day / 1440 minutes TTL)
-        $customClaims = ['merchant_id' => $user->merchant_id];
+        // Block deactivated additional admins
+        if ($user->is_additional_admin && $user->admin_status === 'inactive') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been deactivated by the merchant administrator. Please contact your organization owner.'
+            ], 403);
+        }
+
+        $effectiveMerchantId = $user->getEffectiveMerchantId();
+
+        // Generate JWT token using effective merchant_id (with 1 day / 1440 minutes TTL)
+        $customClaims = [
+            'merchant_id' => $effectiveMerchantId,
+            'is_additional_admin' => (bool) $user->is_additional_admin,
+            'parent_merchant_id' => $user->parent_merchant_id,
+        ];
         $token = auth('api')->setTTL(1440)->claims($customClaims)->login($user);
+
+        $userPayload = $user->toArray();
+        $userPayload['merchant_id'] = $effectiveMerchantId;
+        $userPayload['phone_no'] = $user->phone_number;
+        $userPayload['is_additional_admin'] = (bool) $user->is_additional_admin;
+        $userPayload['parent_merchant_id'] = $user->parent_merchant_id;
+        $userPayload['access_type'] = $user->is_additional_admin ? ($user->access_type ?? 'custom') : 'full';
+        $userPayload['permissions'] = $user->getEffectivePermissions();
+        $userPayload['status'] = $user->admin_status ?? 'active';
+        $userPayload['business_verified'] = $user->getEffectiveBusinessVerified();
 
         return response()->json([
             'status' => true,
             'message' => 'Login successful',
             'user_id' => $user->id,
-            'merchant_id' => $user->merchant_id,
+            'merchant_id' => $effectiveMerchantId,
             'JWT_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth('api')->factory()->getTTL() * 60,
-            'user' => $user,
+            'user' => $userPayload,
         ], 200);
     }
 

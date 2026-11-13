@@ -11,9 +11,9 @@ class GatewayController extends Controller
 {
     protected $client;
 
-    public function __construct()
+    public function __construct(?Client $client = null)
     {
-        $this->client = new Client([
+        $this->client = $client ?? new Client([
             'http_errors' => false, // Don't throw exceptions on 4xx/5xx responses
             'timeout' => 30.0,
         ]);
@@ -42,9 +42,31 @@ class GatewayController extends Controller
      */
     public function getAuthenticatedUser(Request $request)
     {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        if ($user->is_additional_admin && !$user->relationLoaded('parentMerchant')) {
+            $user->load('parentMerchant');
+        }
+
+        $userData = $user->toArray();
+        $userData['merchant_id'] = $user->getEffectiveMerchantId();
+        $userData['phone_no'] = $user->phone_number;
+        $userData['is_additional_admin'] = (bool) $user->is_additional_admin;
+        $userData['parent_merchant_id'] = $user->parent_merchant_id;
+        $userData['access_type'] = $user->is_additional_admin ? ($user->access_type ?? 'custom') : 'full';
+        $userData['permissions'] = $user->getEffectivePermissions();
+        $userData['status'] = $user->admin_status ?? 'active';
+        $userData['business_verified'] = $user->getEffectiveBusinessVerified();
+
         return response()->json([
             'status' => true,
-            'data' => $request->user()
+            'data' => $userData
         ]);
     }
 
@@ -102,11 +124,17 @@ class GatewayController extends Controller
         // Add internal service token
         $headers['X-Internal-Service-Token'] = config('services.internal.token');
 
-        // If user is authenticated, attach user context headers
+        // If user is authenticated, attach tenant & actor context headers
         if ($user = $request->user()) {
-            $headers['X-User-ID'] = (string) $user->id;
+            if ($user->is_additional_admin && !$user->relationLoaded('parentMerchant')) {
+                $user->load('parentMerchant');
+            }
+
+            $headers['X-User-ID'] = (string) $user->getEffectiveMerchantUserId();
+            $headers['X-Actor-User-ID'] = (string) $user->id;
             $headers['X-User-Role'] = (string) $user->role;
-            $headers['X-Merchant-ID'] = (string) $user->merchant_id;
+            $headers['X-Merchant-ID'] = (string) $user->getEffectiveMerchantId();
+            $headers['X-Is-Additional-Admin'] = $user->is_additional_admin ? 'true' : 'false';
         }
 
         // Setup Guzzle options
@@ -166,8 +194,8 @@ class GatewayController extends Controller
             }
 
             $options['multipart'] = $multipart;
-        } else {
-            // JSON or form params
+        } elseif (!in_array(strtoupper($request->method()), ['GET', 'HEAD'], true)) {
+            // JSON or form params for non-GET/HEAD requests
             $contentType = $request->header('Content-Type');
             if (str_contains((string) $contentType, 'application/json')) {
                 $options['json'] = $request->json()->all();

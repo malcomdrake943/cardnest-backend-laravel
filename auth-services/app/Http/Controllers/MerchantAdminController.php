@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\FirebaseVerificationException;
 use App\Models\MerchantAdminAuditLog;
 use App\Models\Users;
-use App\Services\FirebaseOtpVerifier;
 use App\Support\MerchantPermissions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,11 +13,6 @@ use Illuminate\Validation\Rule;
 
 class MerchantAdminController extends Controller
 {
-    public function __construct(
-        private readonly FirebaseOtpVerifier $firebaseOtpVerifier
-    ) {
-    }
-
     /**
      * GET /api/merchant/admins
      * List all additional admins scoped to the authenticated merchant.
@@ -59,7 +52,7 @@ class MerchantAdminController extends Controller
 
     /**
      * POST /api/merchant/admins
-     * Create a new additional admin after verifying Firebase Phone OTP.
+     * Create a new additional admin under the authenticated merchant.
      */
     public function store(Request $request): JsonResponse
     {
@@ -72,7 +65,6 @@ class MerchantAdminController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
-                'firebase_token' => ['required', 'string'],
                 'email' => ['required', 'email', 'max:255', 'unique:users,email'],
                 'country_code' => ['required', 'string', 'regex:/^\+[1-9]\d{0,4}$/'],
                 'phone_no' => ['required', 'string', 'regex:/^[0-9]{6,15}$/', 'unique:users,phone_number'],
@@ -100,15 +92,6 @@ class MerchantAdminController extends Controller
 
         if ($escalationResponse = $this->checkPrivilegeEscalation($actorUser, $accessType, $resolvedPermissions)) {
             return $escalationResponse;
-        }
-
-        try {
-            $this->firebaseOtpVerifier->verify((string) $request->input('firebase_token'), $actorUser);
-        } catch (FirebaseVerificationException $e) {
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ], $e->statusCode);
         }
 
         $admin = DB::transaction(function () use ($request, $actorUser, $merchantUserId, $primaryMerchant, $accessType, $resolvedPermissions) {

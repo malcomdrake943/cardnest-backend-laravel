@@ -7,17 +7,11 @@ use App\Models\BusinessProfile;
 use App\Models\MerchantAdminAuditLog;
 use App\Models\Users;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class MerchantAdminIamTest extends TestCase
 {
     use RefreshDatabase;
-
-    private string $privateKeyPem;
-    private string $certificatePem;
-    private string $kid = 'test-firebase-kid-1';
 
     protected function setUp(): void
     {
@@ -26,16 +20,6 @@ class MerchantAdminIamTest extends TestCase
         config([
             'jwt.secret' => str_repeat('a', 64),
             'services.internal.token' => 'test-internal-token',
-            'services.firebase.project_id' => 'cardnest-test-project',
-        ]);
-
-        Cache::flush();
-        $this->generateTestKeypair();
-
-        Http::fake([
-            'https://www.googleapis.com/robot/v1/metadata/x509/*' => Http::response([
-                $this->kid => $this->certificatePem,
-            ], 200),
         ]);
     }
 
@@ -78,10 +62,8 @@ class MerchantAdminIamTest extends TestCase
 
         $headers = ['X-User-ID' => (string) $primary->id, 'X-Actor-User-ID' => (string) $primary->id];
 
-        // 1. Create custom admin with valid Firebase OTP token
-        $token1 = $this->createFirebaseToken('+12025550100');
+        // 1. Create custom admin without backend Firebase token
         $createRes = $this->withHeaders($headers)->postJson('/api/merchant/admins', [
-            'firebase_token' => $token1,
             'email' => 'finance@merchant.com',
             'country_code' => '+1',
             'phone_no' => '2025550143',
@@ -113,18 +95,7 @@ class MerchantAdminIamTest extends TestCase
             'action' => 'admin.created',
         ]);
 
-        // 2. Replay protection blocks reusing the exact same Firebase token
-        $replayRes = $this->withHeaders($headers)->postJson('/api/merchant/admins', [
-            'firebase_token' => $token1,
-            'email' => 'ops@merchant.com',
-            'country_code' => '+1',
-            'phone_no' => '2025550144',
-            'access_type' => 'full',
-            'permissions' => ['dashboard.overview'],
-        ]);
-        $replayRes->assertStatus(403);
-
-        // 3. Create another admin under a different merchant to test tenant isolation
+        // 2. Create another admin under a different merchant to test tenant isolation
         $otherAdmin = Users::create([
             'parent_merchant_id' => $otherMerchant->id,
             'is_additional_admin' => true,
@@ -137,13 +108,13 @@ class MerchantAdminIamTest extends TestCase
             'role' => 'BUSINESS_USER',
         ]);
 
-        // 4. List admins (tenant-isolated + search/status filters)
+        // 3. List admins (tenant-isolated + search/status filters)
         $listRes = $this->withHeaders($headers)->getJson('/api/merchant/admins?status=active&search=finance');
         $listRes->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.email', 'finance@merchant.com');
 
-        // 5. Show admin details (own vs other merchant)
+        // 4. Show admin details (own vs other merchant)
         $this->withHeaders($headers)->getJson("/api/merchant/admins/{$adminId}")
             ->assertStatus(200)
             ->assertJsonPath('data.id', $adminId);
@@ -151,7 +122,7 @@ class MerchantAdminIamTest extends TestCase
         $this->withHeaders($headers)->getJson("/api/merchant/admins/{$otherAdmin->id}")
             ->assertStatus(404);
 
-        // 6. Update permissions (test full with empty array, then switch back to custom)
+        // 5. Update permissions (test full with empty array, then switch back to custom)
         $fullPermRes = $this->withHeaders($headers)->putJson("/api/merchant/admins/{$adminId}/permissions", [
             'access_type' => 'full',
             'permissions' => [],
@@ -168,7 +139,7 @@ class MerchantAdminIamTest extends TestCase
             ->assertJsonPath('data.access_type', 'custom')
             ->assertJsonPath('data.permissions', ['dashboard.overview', 'dashboard.scans', 'dashboard.billing']);
 
-        // 7. Toggle status to inactive and verify login is blocked
+        // 6. Toggle status to inactive and verify login is blocked
         $statusRes = $this->withHeaders($headers)->patchJson("/api/merchant/admins/{$adminId}/status", [
             'status' => 'inactive',
         ]);
@@ -201,7 +172,7 @@ class MerchantAdminIamTest extends TestCase
             ->assertJsonPath('user.permissions', ['dashboard.overview', 'dashboard.scans', 'dashboard.billing'])
             ->assertJsonPath('user.status', 'active');
 
-        // 8. Delete admin
+        // 7. Delete admin
         $this->withHeaders($headers)->deleteJson("/api/merchant/admins/{$adminId}")
             ->assertStatus(200)
             ->assertJsonPath('status', true);
@@ -210,14 +181,13 @@ class MerchantAdminIamTest extends TestCase
         $this->assertEquals(6, MerchantAdminAuditLog::count()); // created, full perms, custom perms, inactive, active, deleted
     }
 
-    public function test_firebase_otp_validation_and_duplicate_checks(): void
+    public function test_validation_and_duplicate_checks_when_creating_additional_admin(): void
     {
         $primary = $this->createPrimaryMerchant();
         $headers = ['X-User-ID' => (string) $primary->id, 'X-Actor-User-ID' => (string) $primary->id];
 
         // Duplicate email
         $this->withHeaders($headers)->postJson('/api/merchant/admins', [
-            'firebase_token' => $this->createFirebaseToken('+12025550100'),
             'email' => $primary->email,
             'country_code' => '+1',
             'phone_no' => '2025550145',
@@ -227,7 +197,6 @@ class MerchantAdminIamTest extends TestCase
 
         // Duplicate phone_no
         $this->withHeaders($headers)->postJson('/api/merchant/admins', [
-            'firebase_token' => $this->createFirebaseToken('+12025550100'),
             'email' => 'unique@merchant.com',
             'country_code' => '+1',
             'phone_no' => $primary->phone_number,
@@ -237,9 +206,8 @@ class MerchantAdminIamTest extends TestCase
             ->assertJsonPath('message', 'The phone number has already been taken.')
             ->assertJsonStructure(['status', 'message', 'errors' => ['phone_no']]);
 
-        // Super Admin permission rejected
+        // Super Admin / invalid permission rejected
         $this->withHeaders($headers)->postJson('/api/merchant/admins', [
-            'firebase_token' => $this->createFirebaseToken('+12025550100'),
             'email' => 'unique2@merchant.com',
             'country_code' => '+1',
             'phone_no' => '2025550146',
@@ -247,24 +215,13 @@ class MerchantAdminIamTest extends TestCase
             'permissions' => ['superadmin.access'],
         ])->assertStatus(422);
 
-        // Phone mismatch with Firebase token
+        // Empty permissions array rejected when access_type is custom
         $this->withHeaders($headers)->postJson('/api/merchant/admins', [
-            'firebase_token' => $this->createFirebaseToken('+19999999999'),
             'email' => 'unique3@merchant.com',
             'country_code' => '+1',
             'phone_no' => '2025550147',
             'access_type' => 'custom',
-            'permissions' => ['dashboard.scans'],
-        ])->assertStatus(403);
-
-        // Expired Firebase token
-        $this->withHeaders($headers)->postJson('/api/merchant/admins', [
-            'firebase_token' => $this->createFirebaseToken('+12025550100', time() - 3600, time() - 1800),
-            'email' => 'unique4@merchant.com',
-            'country_code' => '+1',
-            'phone_no' => '2025550148',
-            'access_type' => 'custom',
-            'permissions' => ['dashboard.scans'],
+            'permissions' => [],
         ])->assertStatus(422);
     }
 
@@ -303,7 +260,6 @@ class MerchantAdminIamTest extends TestCase
 
         // Cannot grant unheld permission during creation
         $this->withHeaders($delegatedHeaders)->postJson('/api/merchant/admins', [
-            'firebase_token' => $this->createFirebaseToken('+12025550155'),
             'email' => 'escalated@merchant.com',
             'country_code' => '+1',
             'phone_no' => '2025550157',
@@ -399,58 +355,4 @@ class MerchantAdminIamTest extends TestCase
             'admin_status' => 'active',
         ], $overrides));
     }
-
-    private function generateTestKeypair(): void
-    {
-        $opensslConfig = [];
-        foreach ([getenv('OPENSSL_CONF'), 'D:/xampp/apache/conf/openssl.cnf', 'C:/xampp/apache/conf/openssl.cnf'] as $candidate) {
-            if (is_string($candidate) && $candidate !== '' && file_exists($candidate)) {
-                $opensslConfig['config'] = $candidate;
-                break;
-            }
-        }
-
-        $res = openssl_pkey_new(array_merge([
-            'private_key_bits' => 2048,
-            'private_key_type' => OPENSSL_KEYTYPE_RSA,
-        ], $opensslConfig));
-
-        openssl_pkey_export($res, $privateKey, null, $opensslConfig);
-        $csr = openssl_csr_new(['commonName' => 'firebase-test'], $res, $opensslConfig);
-        $x509 = openssl_csr_sign($csr, null, $res, 365, $opensslConfig);
-        openssl_x509_export($x509, $certOut);
-
-        $this->privateKeyPem = $privateKey;
-        $this->certificatePem = $certOut;
-    }
-
-    private function createFirebaseToken(string $phoneNumber, ?int $iat = null, ?int $exp = null): string
-    {
-        $now = time();
-        $header = ['alg' => 'RS256', 'typ' => 'JWT', 'kid' => $this->kid];
-        $payload = [
-            'iss' => 'https://securetoken.google.com/cardnest-test-project',
-            'aud' => 'cardnest-test-project',
-            'sub' => 'firebase-uid-123',
-            'iat' => $iat ?? $now,
-            'exp' => $exp ?? ($now + 300),
-            'phone_number' => $phoneNumber,
-        ];
-
-        $segments = [
-            $this->base64UrlEncode(json_encode($header)),
-            $this->base64UrlEncode(json_encode($payload)),
-        ];
-
-        openssl_sign(implode('.', $segments), $signature, $this->privateKeyPem, OPENSSL_ALGO_SHA256);
-        $segments[] = $this->base64UrlEncode($signature);
-
-        return implode('.', $segments);
-    }
-
-    private function base64UrlEncode(string $data): string
-    {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
 }
-
